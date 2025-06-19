@@ -1,0 +1,82 @@
+[versions]
+apacheCommonLang = "3.17.0"
+aspectjWeaver = "1.9.22"
+awspringCloud = "3.2.0-M1"
+
+cycloneDxBom = "1.10.0"
+
+#detekt = "1.23.6"
+dockerCompose = "0.17.8"
+dokka = "1.9.20"
+
+jacksonKotlin = "2.17.1"
+jakartaPlatform = "11.0.0-M3"
+junit = "5.10.3"
+
+kotlin = "2.0.0"
+kotlinxCoroutines = "1.9.0-RC"
+kotlinxSerialization = "1.7.1"
+kover = "0.7.6"
+ktorClient = "3.0.1"
+
+liquibase = "4.29.2"
+logging = "4.0.0-beta-2" #
+
+mockk = "1.13.11"
+mockkSpring = "4.0.2"
+
+nettyResolver = "4.2.0.Alpha2" # add qualifier like `:osx-aarch_64`
+
+springActuator = "3.3.3"
+springBoot = "3.4.0"
+springDependencyManagement = "1.1.6"
+springDocsWebFlux = "2.5.0"
+
+##region plugin versions
+jpaPlugin = "1.9.25"
+openApiGradlePlugin = "1.9.0"
+##endregion
+#
+[libraries]
+apacheCommonLang = { module = "org.apache.commons:commons-lang3", version.ref = "apacheCommonLang" }
+aspectjWeaver = { module = "org.aspectj:aspectjweaver", version.ref = "aspectjWeaver" }
+awspringCloud = { module = "io.awspring.cloud:spring-cloud-aws-starter-s3", version.ref = "awspringCloud" }
+
+jacksonDataTypes = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jacksonKotlin" }
+jacksonKotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jacksonKotlin" }
+jakartaPlatform = { module = "jakarta.platform:jakarta.jakartaee-api", version.ref = "jakartaPlatform" }
+junitJupiterApi = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+junitJupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+
+kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinxCoroutinesReactor = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor", version.ref = "kotlinxCoroutines" }
+kotlinxSerialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+
+liquibase = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
+logging = { module = "io.github.microutils:kotlin-logging", version.ref = "logging" }
+
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+mockkSpring = { module = "com.ninja-squad:springmockk", version.ref = "mockkSpring" }
+
+nettyResolver = { module = "io.netty:netty-resolver-dns-native-macos", version.ref = "nettyResolver" }
+
+springActuator = { module = "org.springframework.boot:spring-boot-actuator", version.ref = "springActuator" }
+springDocsWebFlux = { module = "org.springdoc:springdoc-openapi-starter-webflux-ui", version.ref = "springDocsWebFlux" }
+
+[bundles]
+reactiveSpringTesting = [ "mockk" ] #
+standardTesting = [ "junitJupiterApi", "junitJupiterEngine", "mockk" ] #
+
+[plugins]
+cycloneDxBom = { id = "org.cyclonedx.bom", version.ref = "cycloneDxBom" }
+
+#detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+dockerCompose = { id = "com.avast.gradle.docker-compose", version.ref = "dockerCompose" } #
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+
+openApiGradlePlugin = { id = "org.springdoc.openapi-gradle-plugin", version.ref = "openApiGradlePlugin" } #
+
+springBoot = { id = "org.springframework.boot", version.ref = "springBoot" } #
+springDependencyManagement = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" } #
