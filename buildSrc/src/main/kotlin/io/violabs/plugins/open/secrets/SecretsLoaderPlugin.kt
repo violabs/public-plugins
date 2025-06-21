@@ -20,18 +20,19 @@ open class SecretsLoaderPlugin : DefaultOutputPlugin() {
         val extension = project.extensions.create<SecretsLoaderExtension>("secretsLoader")
 
         project.afterEvaluate {
-            project.logger.lifecycle("Applying SecretsLoaderPlugin to project: ${project.name}")
-            project.logger.lifecycle(" | [INFO] secretFile: ${extension.secretFile}")
-            project.logger.lifecycle(" | [INFO] systemProperties: ${extension.systemProperties()}")
+            logger.lifecycle("Applying SecretsLoaderPlugin to project: ${name}")
+            logger.lifecycle(" | [INFO] secretFile: ${extension.secretFile}")
+            logger.lifecycle(" | [INFO] systemProperties: ${extension.systemProperties()}")
 
-            val amountProcessed: Int = project.rootProject.processSecrets(
+            val amountProcessed: Int = rootProject.processSecrets(
                 extension.secretFile ?: "secret.properties",
                 extension.systemProperties()
             )
 
-            project.logger.lifecycle(" | [INFO] Processed $amountProcessed secrets into extra properties.")
+            logger.lifecycle(" | [INFO] Processed $amountProcessed secrets into extra properties.")
 
-            project.tasks.register("checkSecretsExist", CheckSecretsExistTask::class.java) {
+            logger.lifecycle(" | [INFO] Registering `checkSecretsExist` task")
+            tasks.register("checkSecretsExist", CheckSecretsExistTask::class.java) {
                 this.group = "verification"
                 this.description = "Check if secrets exist in the secret file"
                 this.secretFilePath = project.rootProject.file(extension.secretFile ?: "secret.properties")

@@ -33,4 +33,9 @@ open class DigitalOceanSpacesExtension {
      * The path within the bucket where artifacts will be uploaded
      */
     var artifactPath: String? = null
+
+    /**
+     * Whether to perform the actual upload or just a dry run
+     */
+    var dryRun: Boolean = false
 }

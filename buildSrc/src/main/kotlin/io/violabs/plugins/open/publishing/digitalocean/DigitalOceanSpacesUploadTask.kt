@@ -1,10 +1,8 @@
 package io.violabs.plugins.open.publishing.digitalocean
 
-import org.gradle.api.provider.Property
+import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-import software.amazon.awssdk.services.s3.S3Client
-import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import java.io.File
 
 /**
@@ -13,16 +11,9 @@ import java.io.File
  * to the specified bucket in Digital Ocean Spaces.
  * It uses the configuration provided in the `DigitalOceanSpacesExtension`.
  */
-open class DigitalOceanSpacesUploadTask : DigitalOceanSpacesTask() {
-    /**
-     * The extension for configuring Digital Ocean Spaces access information.
-     * This property is used to retrieve the access key, secret key, bucket name,
-     * endpoint, and region for Digital Ocean Spaces.
-     * It is expected to be set in the build script using the `digitalOceanSpaces` extension.
-     */
+abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
     @get:Input
-    val extension: Property<DigitalOceanSpacesExtension> =
-        project.objects.property(DigitalOceanSpacesExtension::class.java)
+    abstract var digitalOceanSpacesClient: DigitalOceanSpacesClient
 
     /**
      * Uploads the project's artifacts to Digital Ocean Spaces.
@@ -43,7 +34,7 @@ open class DigitalOceanSpacesUploadTask : DigitalOceanSpacesTask() {
      * * If any of these files do not exist, they will be skipped, and a warning will be logged.
      */
     @TaskAction
-    fun uploadToSpaces() = withS3Client(extension) {
+    fun uploadToSpaces() {
         // Get the build directory
         val buildDir: File = project.layout.buildDirectory.get().asFile
 
@@ -56,8 +47,7 @@ open class DigitalOceanSpacesUploadTask : DigitalOceanSpacesTask() {
         )
 
         // Upload each file
-        val ext = extension.get()
-        filesToUpload.forEach { file -> uploadFile(file, ext) }
+        filesToUpload.forEach(digitalOceanSpacesClient::uploadFile)
     }
 
     /**
@@ -115,27 +105,5 @@ open class DigitalOceanSpacesUploadTask : DigitalOceanSpacesTask() {
      */
     private fun createPomFile(buildDir: File): File? {
         return File(buildDir, "publications/maven/pom-default.xml").takeIf { it.exists() }
-    }
-
-    /**
-     * Uploads a file to Digital Ocean Spaces.
-     * If the file does not exist, it logs a warning and skips the upload.
-     *
-     * @param file The file to upload.
-     * @param ext The extension containing configuration information for Digital Ocean Spaces.
-     */
-    private fun S3Client.uploadFile(file: File, ext: DigitalOceanSpacesExtension) {
-        if (!file.exists()) return logger.warn("File ${file.name} does not exist, skipping upload")
-
-        val key = "${ext.artifactPath ?: ""}/${file.name}"
-
-        logger.lifecycle("Uploading ${file.name} to ${ext.bucket}/$key")
-
-        val request = PutObjectRequest.builder()
-            .bucket(ext.bucket)
-            .key(key)
-            .build()
-
-        this.putObject(request, file.toPath())
     }
 }

@@ -1,5 +1,6 @@
 package io.violabs.plugins.open.publishing.digitalocean
 
+import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -16,7 +17,7 @@ import kotlin.jvm.Throws
  * This task is intended to be used in a Gradle build script to prevent accidental overwriting
  * of existing versions in Digital Ocean Spaces.
  */
-open class DigitalOceanSpacesCheckVersionTask : DigitalOceanSpacesTask() {
+abstract class DigitalOceanSpacesCheckVersionTask : DefaultTask() {
     /**
      * The extension for configuring Digital Ocean Spaces access information.
      * This property is used to retrieve the access key, secret key, bucket name,
@@ -24,8 +25,10 @@ open class DigitalOceanSpacesCheckVersionTask : DigitalOceanSpacesTask() {
      * It is expected to be set in the build script using the `digitalOceanSpaces` extension.
      */
     @get:Input
-    val extension: Property<DigitalOceanSpacesExtension> =
-        project.objects.property(DigitalOceanSpacesExtension::class.java)
+    abstract val extension: Property<DigitalOceanSpacesExtension>
+
+    @get:Input
+    abstract var s3Client: S3Client
 
     /**
      * Checks if the current project version already exists in Digital Ocean Spaces.
@@ -46,7 +49,7 @@ open class DigitalOceanSpacesCheckVersionTask : DigitalOceanSpacesTask() {
      * @throws IllegalArgumentException if any of the required access information is missing.
      */
     @TaskAction
-    fun checkVersion() = withS3Client(extension) {
+    fun checkVersion() {
         val ext = extension.get()
         val bucket = requireNotNull(ext.bucket) { "bucket is required" }
 
@@ -57,7 +60,7 @@ open class DigitalOceanSpacesCheckVersionTask : DigitalOceanSpacesTask() {
         val request = buildRequest(ext)
 
         try {
-            processExistingVersion(bucket, key, request)
+            s3Client.processExistingVersion(bucket, key, request)
         } catch (_: NoSuchKeyException) {
             processNewVersion()
         }
