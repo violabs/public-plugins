@@ -28,4 +28,12 @@ gradlePlugin {
             implementationClass = "io.violabs.plugins.open.publishing.digitalocean.DigitalOceanSpacesPublishPlugin"
         }
     }
+
+    plugins {
+        create("secretsLoaderPlugin") {
+            id = "io.violabs.plugins.open.secrets.loader"
+            version = "0.0.1"
+            implementationClass = "io.violabs.plugins.open.secrets.SecretsLoaderPlugin"
+        }
+    }
 }
