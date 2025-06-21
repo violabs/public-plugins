@@ -1,78 +1,141 @@
 package io.violabs.plugins.open.publishing.digitalocean
 
-import org.gradle.api.DefaultTask
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
-import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import java.io.File
-import java.net.URI
-import kotlin.collections.plusAssign
 
-open class DigitalOceanSpacesUploadTask : DefaultTask() {
+/**
+ * Task to upload project artifacts to Digital Ocean Spaces.
+ * This task uploads the main JAR, sources JAR, Javadoc JAR, and POM file
+ * to the specified bucket in Digital Ocean Spaces.
+ * It uses the configuration provided in the `DigitalOceanSpacesExtension`.
+ */
+open class DigitalOceanSpacesUploadTask : DigitalOceanSpacesTask() {
+    /**
+     * The extension for configuring Digital Ocean Spaces access information.
+     * This property is used to retrieve the access key, secret key, bucket name,
+     * endpoint, and region for Digital Ocean Spaces.
+     * It is expected to be set in the build script using the `digitalOceanSpaces` extension.
+     */
     @get:Input
-    val extension: Property<DigitalOceanSpacesExtension> = project.objects.property(DigitalOceanSpacesExtension::class.java)
+    val extension: Property<DigitalOceanSpacesExtension> =
+        project.objects.property(DigitalOceanSpacesExtension::class.java)
 
+    /**
+     * Uploads the project's artifacts to Digital Ocean Spaces.
+     * This task uploads the main JAR, sources JAR, Javadoc JAR, and POM file
+     * to the specified bucket in Digital Ocean Spaces.
+     * It uses the configuration provided in the `DigitalOceanSpacesExtension`.
+     * * The task requires the following properties to be set in the extension:
+     * * - `accessKey`: The access key for Digital Ocean Spaces.
+     * * - `secretKey`: The secret key for Digital Ocean Spaces.
+     * * - `bucket`: The name of the Digital Ocean Spaces bucket.
+     * * - `endpoint`: The endpoint URL for Digital Ocean Spaces (default is "https://nyc3.digitaloceanspaces.com").
+     * * - `region`: The region for Digital Ocean Spaces (default is "nyc3").
+     * * This task will upload the following files:
+     * * - Main JAR file: `libs/<project-name>-<version>.jar`
+     * * - Sources JAR file: `libs/<project-name>-<version>-sources.jar` (if it exists)
+     * * - Javadoc JAR file: `libs/<project-name>-<version>-javadoc.jar` (if it exists)
+     * * - POM file: `publications/maven/pom-default.xml` (if it exists)
+     * * If any of these files do not exist, they will be skipped, and a warning will be logged.
+     */
     @TaskAction
-    fun uploadToSpaces() {
-        val ext = extension.get()
-
-        // Validate required properties
-        requireNotNull(ext.accessKey) { "accessKey is required" }
-        requireNotNull(ext.secretKey) { "secretKey is required" }
-        requireNotNull(ext.bucket) { "bucket is required" }
-
-        val credentials = AwsBasicCredentials.create(ext.accessKey, ext.secretKey)
-
-        val s3Client = S3Client.builder()
-            .endpointOverride(URI.create(ext.endpoint))
-            .credentialsProvider(StaticCredentialsProvider.create(credentials))
-            .region(Region.of(ext.region))
-            .build()
-
+    fun uploadToSpaces() = withS3Client(extension) {
         // Get the build directory
-        val buildDir = project.layout.buildDirectory.get().asFile
+        val buildDir: File = project.layout.buildDirectory.get().asFile
 
         // Files to upload
-        val filesToUpload = mutableListOf<File>()
-
-        // Add main JAR
-        filesToUpload += File(buildDir, "libs/${project.name}-${project.version}.jar")
-
-        // Add sources JAR if it exists
-        val sourcesJar = File(buildDir, "libs/${project.name}-${project.version}-sources.jar")
-        if (sourcesJar.exists()) filesToUpload += sourcesJar
-
-        // Add JavaDoc JAR if it exists
-        val javadocJar = File(buildDir, "libs/${project.name}-${project.version}-javadoc.jar")
-        if (javadocJar.exists()) filesToUpload += javadocJar
-
-        // Add POM file
-        val pomFile = File(buildDir, "publications/maven/pom-default.xml")
-        if (pomFile.exists()) filesToUpload += pomFile
+        val filesToUpload: MutableList<File> = nullishMutableListOf(
+            createJar(buildDir),
+            createSourcesJar(buildDir),
+            createJavadocJar(buildDir),
+            createPomFile(buildDir)
+        )
 
         // Upload each file
-        filesToUpload.forEach { file ->
-            if (file.exists()) {
-                val key = "${ext.artifactPath ?: ""}/${file.name}"
+        val ext = extension.get()
+        filesToUpload.forEach { file -> uploadFile(file, ext) }
+    }
 
-                logger.lifecycle("Uploading ${file.name} to ${ext.bucket}/$key")
+    /**
+     * Creates a mutable list of non-null items.
+     * This function filters out null values from the provided items and returns a mutable list.
+     *
+     * @param items The items to be included in the list, which can be nullable.
+     * @return A mutable list containing only non-null items.
+     */
+    private fun <T> nullishMutableListOf(vararg items: T?): MutableList<T> {
+        return sequenceOf(*items)
+            .filterNotNull()
+            .toMutableList()
+    }
 
-                val request = PutObjectRequest.builder()
-                    .bucket(ext.bucket)
-                    .key(key)
-                    .build()
+    /**
+     * Creates the main JAR file for the project.
+     * The JAR file is named using the project name and version.
+     *
+     * @param buildDir The build directory where the JAR file will be created.
+     * @return The created JAR file.
+     */
+    private fun createJar(buildDir: File): File {
+        return File(buildDir, "libs/${project.name}-${project.version}.jar")
+    }
 
-                s3Client.putObject(request, file.toPath())
-            } else {
-                logger.warn("File ${file.name} does not exist, skipping upload")
-            }
-        }
+    /**
+     * Creates the sources JAR file for the project.
+     * The sources JAR file is named using the project name and version.
+     *
+     * @param buildDir The build directory where the sources JAR file will be created.
+     * @return The created sources JAR file, or null if it does not exist.
+     */
+    private fun createSourcesJar(buildDir: File): File? {
+        return File(buildDir, "libs/${project.name}-${project.version}-sources.jar").takeIf { it.exists() }
+    }
 
-        s3Client.close()
+    /**
+     * Creates the Javadoc JAR file for the project.
+     * The Javadoc JAR file is named using the project name and version.
+     *
+     * @param buildDir The build directory where the Javadoc JAR file will be created.
+     * @return The created Javadoc JAR file, or null if it does not exist.
+     */
+    private fun createJavadocJar(buildDir: File): File? {
+        return File(buildDir, "libs/${project.name}-${project.version}-javadoc.jar").takeIf { it.exists() }
+    }
+
+    /**
+     * Creates the POM file for the project.
+     * The POM file is located in the publications directory.
+     *
+     * @param buildDir The build directory where the POM file will be created.
+     * @return The created POM file, or null if it does not exist.
+     */
+    private fun createPomFile(buildDir: File): File? {
+        return File(buildDir, "publications/maven/pom-default.xml").takeIf { it.exists() }
+    }
+
+    /**
+     * Uploads a file to Digital Ocean Spaces.
+     * If the file does not exist, it logs a warning and skips the upload.
+     *
+     * @param file The file to upload.
+     * @param ext The extension containing configuration information for Digital Ocean Spaces.
+     */
+    private fun S3Client.uploadFile(file: File, ext: DigitalOceanSpacesExtension) {
+        if (!file.exists()) return logger.warn("File ${file.name} does not exist, skipping upload")
+
+        val key = "${ext.artifactPath ?: ""}/${file.name}"
+
+        logger.lifecycle("Uploading ${file.name} to ${ext.bucket}/$key")
+
+        val request = PutObjectRequest.builder()
+            .bucket(ext.bucket)
+            .key(key)
+            .build()
+
+        this.putObject(request, file.toPath())
     }
 }

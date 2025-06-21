@@ -24,6 +24,7 @@ gradlePlugin {
     plugins {
         create("digitalOceanSpacesPlugin") {
             id = "io.violabs.plugins.open.publishing.digital-ocean-spaces"
+            version = "0.0.1"
             implementationClass = "io.violabs.plugins.open.publishing.digitalocean.DigitalOceanSpacesPublishPlugin"
         }
     }

@@ -11,7 +11,7 @@ class DigitalOceanSpacesPublishPlugin : Plugin<Project> {
         val extension = project.extensions.create<DigitalOceanSpacesExtension>("digitalOceanSpaces")
 
         // Register the version check task
-        project.tasks.register<CheckVersionTask>("checkSpacesVersion") {
+        project.tasks.register<DigitalOceanSpacesCheckVersionTask>("checkSpacesVersion") {
             group = "verification"
             description = "Checks if the current version already exists in Digital Ocean Spaces"
             this.extension.set(extension)

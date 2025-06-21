@@ -1,21 +1,14 @@
 package io.violabs.plugins.open.publishing.digitalocean
 
-import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
-import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import java.io.File
-import java.net.URI
 import kotlin.jvm.Throws
-
-private fun <T> T.and(block: T.() -> Unit): T = apply(block)
 
 /**
  * Task to check if a specific version of an artifact already exists in Digital Ocean Spaces.
@@ -23,7 +16,7 @@ private fun <T> T.and(block: T.() -> Unit): T = apply(block)
  * This task is intended to be used in a Gradle build script to prevent accidental overwriting
  * of existing versions in Digital Ocean Spaces.
  */
-open class CheckVersionTask : DefaultTask() {
+open class DigitalOceanSpacesCheckVersionTask : DigitalOceanSpacesTask() {
     /**
      * The extension for configuring Digital Ocean Spaces access information.
      * This property is used to retrieve the access key, secret key, bucket name,
@@ -53,36 +46,21 @@ open class CheckVersionTask : DefaultTask() {
      * @throws IllegalArgumentException if any of the required access information is missing.
      */
     @TaskAction
-    fun checkVersion() {
-        val ext = extension.get().and { validateAccessInfoIsPresent() }
+    fun checkVersion() = withS3Client(extension) {
+        val ext = extension.get()
+        val bucket = requireNotNull(ext.bucket) { "bucket is required" }
 
         addMetadataIfOutputFileIsAvailable()
 
-        val s3Client = createS3Client(ext)
+        val key = createSpacesFileKey(ext)
 
-        s3Client.use { client ->
-            val key = createSpacesFileKey(ext)
+        val request = buildRequest(ext)
 
-            val request = buildRequest(ext)
-
-            try {
-                client.processExistingVersion(ext.bucket!!, key, request)
-            } catch (_: NoSuchKeyException) {
-                processNewVersion()
-            }
+        try {
+            processExistingVersion(bucket, key, request)
+        } catch (_: NoSuchKeyException) {
+            processNewVersion()
         }
-    }
-
-    /**
-     * Validates that the required access information is present in the extension.
-     * Throws an exception if any of the required fields are null.
-     * @return The DigitalOceanSpacesExtension instance for method chaining.
-     */
-    @Throws(IllegalArgumentException::class)
-    private fun DigitalOceanSpacesExtension.validateAccessInfoIsPresent(): DigitalOceanSpacesExtension = apply {
-        requireNotNull(accessKey) { "accessKey is required" }
-        requireNotNull(secretKey) { "secretKey is required" }
-        requireNotNull(bucket) { "bucket is required" }
     }
 
     /**
@@ -103,22 +81,6 @@ open class CheckVersionTask : DefaultTask() {
                 tag=${project.name}-${project.version}
                 """.trimIndent() + "\n"
         )
-    }
-
-    /**
-     * Creates an S3Client configured for Digital Ocean Spaces.
-     * Uses the access key, secret key, endpoint, and region from the provided extension.
-     * @param ext The DigitalOceanSpacesExtension containing configuration information.
-     * @return An S3Client instance configured for Digital Ocean Spaces.
-     */
-    private fun createS3Client(ext: DigitalOceanSpacesExtension): S3Client {
-        val credentials = AwsBasicCredentials.create(ext.accessKey, ext.secretKey)
-
-        return S3Client.builder()
-            .endpointOverride(URI.create(ext.endpoint))
-            .credentialsProvider(StaticCredentialsProvider.create(credentials))
-            .region(Region.of(ext.region))
-            .build()
     }
 
     /**
