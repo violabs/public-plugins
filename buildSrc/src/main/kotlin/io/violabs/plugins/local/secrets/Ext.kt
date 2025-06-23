@@ -1,4 +1,4 @@
-package io.violabs.plugins.open.secrets
+package io.violabs.plugins.local.secrets
 
 object Ext {
     @JvmInline

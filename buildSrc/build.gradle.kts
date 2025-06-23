@@ -1,5 +1,6 @@
 plugins {
     `kotlin-dsl`
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 buildscript {
@@ -22,18 +23,26 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create("digitalOceanSpacesPlugin") {
-            id = "io.violabs.plugins.open.publishing.digital-ocean-spaces"
+        create("secretsLoaderPlugin") {
+            id = "io.violabs.plugins.local.secrets.loader"
             version = "0.0.1"
-            implementationClass = "io.violabs.plugins.open.publishing.digitalocean.DigitalOceanSpacesPublishPlugin"
+            implementationClass = "io.violabs.plugins.local.secrets.SecretsLoaderPlugin"
         }
     }
 
     plugins {
-        create("secretsLoaderPlugin") {
-            id = "io.violabs.plugins.open.secrets.loader"
+        create("localDigitalOceanSpacesPlugin") {
+            id = "io.violabs.plugins.local.publishing.digital-ocean-spaces"
             version = "0.0.1"
-            implementationClass = "io.violabs.plugins.open.secrets.SecretsLoaderPlugin"
+            implementationClass = "io.violabs.plugins.local.publishing.digitalocean.DigitalOceanSpacesPublishPlugin"
+        }
+    }
+
+    plugins {
+        create("localMavenGeneratedArtifacts") {
+            id = "io.violabs.plugins.local.publishing.maven-generated-artifacts"
+            version = "0.0.1"
+            implementationClass = "io.violabs.plugins.local.publishing.ManualMavenArtifactsPlugin"
         }
     }
 }

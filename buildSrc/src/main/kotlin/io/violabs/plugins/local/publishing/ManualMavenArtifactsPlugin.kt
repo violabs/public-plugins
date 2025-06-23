@@ -1,4 +1,4 @@
-package io.violabs.plugins.open.publishing
+package io.violabs.plugins.local.publishing
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -13,6 +13,8 @@ class ManualMavenArtifactsPlugin : Plugin<Project> {
         pluginManager.apply("java")
         pluginManager.apply("org.jetbrains.dokka")
         pluginManager.apply("maven-publish")
+
+        val extension = project.extensions.create<ManualMavenArtifactsExtension>("mavenGeneratedArtifacts")
 
         val sourceSets = project.extensions.getByType<SourceSetContainer>()
 
@@ -44,31 +46,35 @@ class ManualMavenArtifactsPlugin : Plugin<Project> {
                     artifact(dokkaHtmlJar)
 
                     pom {
-                        name.set("Konstellation DSL Builder")
-                        description.set(
-                            """
-                            Konstellation automates your Kotlin-DSL generation with KotlinPoet.
-                            """.trimIndent()
-                        )
-                        url.set("https://github.com/violabs/konstellation")
+                        name.set(extension.name)
+                        description.set(extension.description?.trimIndent())
+                        url.set(extension.websiteUrl)
 
                         licenses {
-                            license {
-                                name.set("Apache License, Version 2.0")
-                                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                            extension.licenses()?.forEach { license ->
+                                license {
+                                    name.set(license.name)
+                                    url.set(license.url)
+                                }
                             }
                         }
                         developers {
-                            developer {
-                                id.set("joshstallnick")
-                                name.set("Josh Stallnick")
-                                organization.set("Violabs Software")
+                            extension.developers()?.forEach { developer ->
+                                developer {
+                                    id.set(developer.id)
+                                    name.set(developer.name)
+                                    email.set(developer.email)
+                                    organization.set(developer.organization)
+                                }
                             }
                         }
                         scm {
-                            connection.set("scm:git:git://github.com/violabs/konstellation.git")
-                            developerConnection.set("scm:git:ssh://github.com:violabs/konstellation.git")
-                            url.set("https://github.com/violabs/konstellation")
+                            val scm = extension.scm()
+                            val connectionLocation = scm?.connection ?: "github.com/violabs/${project.name}.git"
+                            val developerConnectionLocation = scm?.developerConnection ?: connection
+                            connection.set("scm:git:git://$connectionLocation")
+                            developerConnection.set("scm:git:ssh://$developerConnectionLocation")
+                            url.set(scm?.url ?: extension.websiteUrl)
                         }
                     }
                 }

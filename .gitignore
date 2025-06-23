@@ -2,3 +2,5 @@
 .gradle
 .DS_Store
 build/**
+
+secret.properties

@@ -1,8 +1,7 @@
-import io.violabs.plugins.open.secrets.getPropertyOrEnv
-
 plugins {
-    id("io.violabs.plugins.open.publishing.digital-ocean-spaces")
-    id("io.violabs.plugins.open.secrets.loader")
+    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
+    id("io.violabs.plugins.local.secrets.loader")
+    id("org.jetbrains.dokka") version "1.9.20"
 }
 
 secretsLoader {
@@ -14,13 +13,13 @@ secretsLoader {
     }
 }
 
-digitalOceanSpacesPublishing {
-    bucket = "my-example-bucket"
-    endpoint = "nyc10.digitaloceanspaces.com" // override default
-    region = "nyc10" // override default
-    artifactPath = "here-is-my-jar"
-    // from secrets loader plugin
-    accessKey = project.getPropertyOrEnv("API_KEY")
-    secretKey = project.getPropertyOrEnv("API_SECRET")
-    dryRun = true // Set to true for dry run mode, no files will be uploaded
-}
+//digitalOceanSpacesPublishing {
+//    bucket = "my-example-bucket"
+//    endpoint = "nyc10.digitaloceanspaces.com" // override default
+//    region = "nyc10" // override default
+//    artifactPath = "here-is-my-jar"
+//    // from secrets loader plugin
+//    accessKey = project.getPropertyOrEnv("API_KEY")
+//    secretKey = project.getPropertyOrEnv("API_SECRET")
+//    dryRun = true // Set to true for dry run mode, no files will be uploaded
+//}

@@ -1,4 +1,4 @@
-package io.violabs.plugins.open.secrets
+package io.violabs.plugins.local.secrets
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.logging.LogLevel
