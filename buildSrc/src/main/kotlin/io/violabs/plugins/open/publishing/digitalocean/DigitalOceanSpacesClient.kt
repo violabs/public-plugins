@@ -32,13 +32,13 @@ class DefaultDigitalOceanSpacesClient(
     ext: DigitalOceanSpacesExtension,
     logger: Logger
 ) : DigitalOceanSpacesClient(ext, logger) {
-    internal val s3Client: S3Client by lazy {
+    internal fun s3Client(): S3Client {
         requireNotNull(ext.accessKey) { "accessKey is required" }
         requireNotNull(ext.secretKey) { "secretKey is required" }
 
         val credentials = AwsBasicCredentials.create(ext.accessKey, ext.secretKey)
 
-        S3Client.builder()
+        return S3Client.builder()
             .endpointOverride(URI.create(ext.endpoint))
             .credentialsProvider(StaticCredentialsProvider.create(credentials))
             .region(Region.of(ext.region))
@@ -51,18 +51,27 @@ class DefaultDigitalOceanSpacesClient(
      *
      * @param file The file to upload.
      */
-    override fun uploadFile(file: File): Unit = s3Client.use {
-        if (!file.exists()) return@use logger.warn("File ${file.name} does not exist, skipping upload")
+    override fun uploadFile(file: File) {
+        val client = s3Client()
+        try {
+            client.use {
+                if (!file.exists()) return@use logger.warn("File ${file.name} does not exist, skipping upload")
 
-        val key = "${ext.artifactPath ?: ""}/${file.name}"
+                val key = "${ext.artifactPath ?: ""}/${file.name}"
 
-        logger.lifecycle("Uploading ${file.name} to ${ext.bucket}/$key")
+                logger.lifecycle("Uploading ${file.name} to ${ext.bucket}/$key")
 
-        val request = PutObjectRequest.builder()
-            .bucket(ext.bucket)
-            .key(key)
-            .build()
+                val request = PutObjectRequest.builder()
+                    .bucket(ext.bucket)
+                    .key(key)
+                    .acl("public-read")
+                    .build()
 
-        it.putObject(request, file.toPath())
+                it.putObject(request, file.toPath())
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to upload file ${file.name} to Digital Ocean Spaces", e)
+            client.close()
+        }
     }
 }

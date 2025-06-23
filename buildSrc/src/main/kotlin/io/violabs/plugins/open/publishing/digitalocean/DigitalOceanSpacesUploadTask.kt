@@ -3,6 +3,7 @@ package io.violabs.plugins.open.publishing.digitalocean
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import software.amazon.awssdk.services.s3.S3Client
 import java.io.File
 
 /**
@@ -12,6 +13,12 @@ import java.io.File
  * It uses the configuration provided in the `DigitalOceanSpacesExtension`.
  */
 abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
+    @get:Input
+    abstract var jarQualifier: String?
+
+    @get:Input
+    abstract var checkS3Client: S3Client
+
     @get:Input
     abstract var digitalOceanSpacesClient: DigitalOceanSpacesClient
 
@@ -35,6 +42,17 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
      */
     @TaskAction
     fun uploadToSpaces() {
+        try {
+            DigitalOceanSpacesCheckVersionTask.checkVersion(
+                project,
+                digitalOceanSpacesClient.ext,
+                checkS3Client
+            )
+        } catch (e: Exception) {
+            project.logger.warn("Version check failed, but continuing due to configuration: ${e.message}")
+            return
+        }
+
         // Get the build directory
         val buildDir: File = project.layout.buildDirectory.get().asFile
 
@@ -43,6 +61,7 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
             createJar(buildDir),
             createSourcesJar(buildDir),
             createJavadocJar(buildDir),
+            createKdocJar(buildDir),
             createPomFile(buildDir)
         )
 
@@ -71,7 +90,7 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
      * @return The created JAR file.
      */
     private fun createJar(buildDir: File): File {
-        return File(buildDir, "libs/${project.name}-${project.version}.jar")
+        return File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}.jar")
     }
 
     /**
@@ -82,7 +101,18 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
      * @return The created sources JAR file, or null if it does not exist.
      */
     private fun createSourcesJar(buildDir: File): File? {
-        return File(buildDir, "libs/${project.name}-${project.version}-sources.jar").takeIf { it.exists() }
+        return File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}-sources.jar").takeIf { it.exists() }
+    }
+
+    /**
+     * Creates the Javadoc JAR file for the project.
+     * The Javadoc JAR file is named using the project name and version.
+     *
+     * @param buildDir The build directory where the Javadoc JAR file will be created.
+     * @return The created Javadoc JAR file, or null if it does not exist.
+     */
+    private fun createKdocJar(buildDir: File): File? {
+        return File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}-kdoc.jar").takeIf { it.exists() }
     }
 
     /**
@@ -93,17 +123,31 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
      * @return The created Javadoc JAR file, or null if it does not exist.
      */
     private fun createJavadocJar(buildDir: File): File? {
-        return File(buildDir, "libs/${project.name}-${project.version}-javadoc.jar").takeIf { it.exists() }
+        return File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}-javadoc.jar").takeIf { it.exists() }
     }
 
     /**
      * Creates the POM file for the project.
-     * The POM file is located in the publications directory.
+     * This method copies the generated POM file from the publications directory
+     * to the libs directory with the proper Maven naming convention.
      *
      * @param buildDir The build directory where the POM file will be created.
-     * @return The created POM file, or null if it does not exist.
+     * @return The created POM file with proper naming, or null if the source POM does not exist.
      */
     private fun createPomFile(buildDir: File): File? {
-        return File(buildDir, "publications/maven/pom-default.xml").takeIf { it.exists() }
+        val sourcePom = File(buildDir, "publications/maven/pom-default.xml")
+        if (!sourcePom.exists()) {
+            return null
+        }
+
+        val targetPom = File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}.pom")
+
+        // Create libs directory if it doesn't exist
+        targetPom.parentFile.mkdirs()
+
+        // Copy the POM file with proper naming
+        sourcePom.copyTo(targetPom, overwrite = true)
+
+        return targetPom
     }
 }
