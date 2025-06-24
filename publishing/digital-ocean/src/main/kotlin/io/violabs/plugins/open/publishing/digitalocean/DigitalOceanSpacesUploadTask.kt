@@ -1,8 +1,12 @@
 package io.violabs.plugins.open.publishing.digitalocean
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.getByType
+import org.gradle.kotlin.dsl.withType
 import software.amazon.awssdk.services.s3.S3Client
 import java.io.File
 
@@ -67,6 +71,10 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
 
         // Upload each file
         filesToUpload.forEach(digitalOceanSpacesClient::uploadFile)
+
+        if (digitalOceanSpacesClient.ext.isPlugin) {
+            uploadGeneratedPluginMarkers(buildDir)
+        }
     }
 
     /**
@@ -149,5 +157,45 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
         sourcePom.copyTo(targetPom, overwrite = true)
 
         return targetPom
+    }
+
+    private fun uploadGeneratedPluginMarkers(buildDir: File) {
+        val publishing = project.extensions.getByType<PublishingExtension>()
+
+        publishing.publications.withType<MavenPublication>().forEach { publication ->
+            // Look for plugin marker publications (they have names like "pluginMaven")
+            if (publication.name.contains("plugin", ignoreCase = true)) {
+
+                // Get the generated artifacts
+                val pomFile = File(buildDir, "publications/${publication.name}/pom-default.xml")
+
+                val jarFile = File(buildDir, "libs/${publication.artifactId}-${publication.version}.jar")
+
+                if (pomFile.exists()) {
+
+                    val targetPom = File(
+                        buildDir,
+                        "libs/${project.group}.${jarQualifier ?: project.name}.gradle.plugin-${project.version}.pom"
+                    )
+
+                    // Create libs directory if it doesn't exist
+                    targetPom.parentFile.mkdirs()
+
+                    // Copy the POM file with proper naming
+                    pomFile.copyTo(targetPom, overwrite = true)
+                    // Upload with the plugin marker path
+                    val originalPath = digitalOceanSpacesClient.ext.artifactPath
+                    digitalOceanSpacesClient.ext.artifactPath =
+                        "plugins/${publication.groupId.replace('.', '/')}/${publication.artifactId}/${publication.version}"
+
+                    digitalOceanSpacesClient.uploadFile(targetPom)
+                    if (jarFile.exists()) {
+                        digitalOceanSpacesClient.uploadFile(jarFile)
+                    }
+
+                    digitalOceanSpacesClient.ext.artifactPath = originalPath
+                }
+            }
+        }
     }
 }

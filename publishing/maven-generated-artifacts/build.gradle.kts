@@ -1,13 +1,12 @@
-import io.violabs.plugins.local.secrets.getPropertyOrEnv
-
 plugins {
     `kotlin-dsl`
     id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
+    id("io.violabs.plugins.local.publishing.maven-generated-artifacts")
     id("org.jetbrains.dokka") version "1.9.20"
 }
 
 group = "io.violabs.plugins.open.publishing"
-version = "0.0.1"
+version = "0.0.2"
 
 buildscript {
     repositories {
@@ -20,12 +19,6 @@ buildscript {
 
 tasks.jar {
     archiveBaseName.set("maven-generated-artifacts")
-//    dependsOn(subprojects.map { it.tasks.named("classes") })
-//
-//    // Pull in each subproject’s compiled classes & resources
-//    from(subprojects.map { proj ->
-//        proj.extensions.getByType<SourceSetContainer>()["main"].output
-//    })
 }
 
 repositories {
@@ -44,9 +37,34 @@ gradlePlugin {
 }
 
 digitalOceanSpacesPublishing {
-    bucket = "open-reliquary"
-    accessKey = project.getPropertyOrEnv("spaces.key", "DO_SPACES_API_KEY")
-    secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
-    artifactPath = "plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
-    isPlugin = true
+    artifactPath = "io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
+}
+
+mavenGeneratedArtifacts {
+    name = "Maven Generated Artifacts"
+    description = """
+            This plugin generates Maven artifacts such as sources, Javadoc, and KDoc JARs.
+            It is used to publish these artifacts to a Maven repository or a digital ocean space.
+        """
+    websiteUrl = "https://github.com/violabs/public-plugins/tree/main/publishing/maven-generated-artifacts"
+
+    licenses {
+        license {
+            name = "Apache License, Version 2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+    }
+
+    developers {
+        developer {
+            id = "violabs"
+            name = "Violabs Team"
+            email = "support@violabs.io"
+            organization = "Violabs Software"
+        }
+    }
+
+    scm {
+        connection = "https://github.com/violabs/public-plugins.git"
+    }
 }

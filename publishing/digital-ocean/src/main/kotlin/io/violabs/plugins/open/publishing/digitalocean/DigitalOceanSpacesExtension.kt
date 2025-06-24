@@ -1,5 +1,8 @@
 package io.violabs.plugins.open.publishing.digitalocean
 
+import io.violabs.plugins.open.publishing.ManualMavenArtifactsExtension
+import org.gradle.api.Action
+
 /**
  * Extension for configuring the plugin
  */
@@ -41,5 +44,17 @@ open class DigitalOceanSpacesExtension {
      */
     var dryRun: Boolean = false
 
-    var continueOnVersionCheckFailure: Boolean = true
+    var isPlugin: Boolean = false
+
+    /**
+     * Reference to the ManualMavenArtifactsExtension for configuration
+     */
+    lateinit var mavenArtifacts: ManualMavenArtifactsExtension
+
+    /**
+     * Configure the Maven artifacts extension using a closure
+     */
+    fun mavenArtifacts(action: Action<ManualMavenArtifactsExtension>) {
+        action.execute(mavenArtifacts)
+    }
 }

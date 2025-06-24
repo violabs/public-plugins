@@ -3,7 +3,7 @@ rootProject.name = "public-plugins"
 pluginManagement {
     repositories {
         maven {
-            url = uri("https://open-reliquary.nyc3.digitaloceanspaces.com/plugins")
+            url = uri("https://open-reliquary.nyc3.cdn.digitaloceanspaces.com/plugins")
         }
         gradlePluginPortal()
     }
@@ -12,6 +12,6 @@ pluginManagement {
 include(
     "example",
     "publishing",
-    "publishing:digital-ocean",
+    "publishing:digital-ocean-spaces",
     "publishing:maven-generated-artifacts"
 )

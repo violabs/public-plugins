@@ -31,23 +31,6 @@ abstract class DigitalOceanSpacesCheckVersionTask : DefaultTask() {
     abstract var s3Client: S3Client
 
     /**
-     * Whether to continue execution when version check fails (default: false)
-     */
-    @get:Input
-    abstract val continueOnFailure: Property<Boolean>
-
-    /**
-     * Whether to suppress detailed exception information (default: true)
-     */
-    @get:Input
-    abstract val suppressDetailedExceptions: Property<Boolean>
-
-    init {
-        continueOnFailure.convention(true)
-        suppressDetailedExceptions.convention(true)
-    }
-
-    /**
      * Checks if the current project version already exists in Digital Ocean Spaces.
      * If the version exists, it throws a [GradleException] with an error message.
      * If the version does not exist, it logs a notice message.

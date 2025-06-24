@@ -14,11 +14,19 @@ import org.gradle.kotlin.dsl.register
 
 class ManualMavenArtifactsPlugin : Plugin<Project> {
     override fun apply(project: Project): Unit = project.run {
+        var overrideDokkaShow: Boolean? = null
         pluginManager.apply("java")
-        pluginManager.apply("org.jetbrains.dokka")
+        try {
+            pluginManager.apply("org.jetbrains.dokka")
+        } catch (e: Exception) {
+            logger.warn("Dokka plugin not found. Please ensure it is applied in your build script if you want jars.")
+            overrideDokkaShow = false
+        }
         pluginManager.apply("maven-publish")
 
-        val extension = project.extensions.getByType<ManualMavenArtifactsExtension>()
+        val extension = project.extensions.create<ManualMavenArtifactsExtension>("pomConfig")
+
+        extension.withDokka = overrideDokkaShow ?: extension.withDokka
 
         val sourceSets = project.extensions.getByType<SourceSetContainer>()
 
@@ -29,16 +37,20 @@ class ManualMavenArtifactsPlugin : Plugin<Project> {
         }
 
         // 2) Dokka Javadoc JAR
-        val dokkaJavadocJar = tasks.register<Jar>("dokkaJavadocJar") {
-            archiveClassifier.set("javadoc")
-            from(tasks.named("dokkaJavadoc"))
-        }
+        val dokkaJavadocJar = if (extension.withDokka) {
+            tasks.register<Jar>("dokkaJavadocJar") {
+                archiveClassifier.set("javadoc")
+                from(tasks.named("dokkaJavadoc"))
+            }
+        } else null
 
         // 3) Dokka HTML/KDoc JAR
-        val dokkaHtmlJar = tasks.register<Jar>("dokkaHtmlJar") {
-            archiveClassifier.set("kdoc")
-            from(tasks.named("dokkaHtml"))
-        }
+        val dokkaHtmlJar = if (extension.withDokka) {
+            tasks.register<Jar>("dokkaHtmlJar") {
+                archiveClassifier.set("kdoc")
+                from(tasks.named("dokkaHtml"))
+            }
+        } else null
 
         // Configure publishing
         extensions.configure<PublishingExtension> {
@@ -46,8 +58,8 @@ class ManualMavenArtifactsPlugin : Plugin<Project> {
                 create<MavenPublication>("maven") {
                     from(components["java"])
                     artifact(sourcesJar)
-                    artifact(dokkaJavadocJar)
-                    artifact(dokkaHtmlJar)
+                    dokkaJavadocJar?.apply(::artifact)
+                    dokkaHtmlJar?.apply(::artifact)
 
                     pom {
                         name.set(extension.name)
@@ -87,7 +99,10 @@ class ManualMavenArtifactsPlugin : Plugin<Project> {
 
         // 5) Make a single "assembleMavenArtifacts" umbrella task
         tasks.register("assembleMavenArtifacts") {
-            dependsOn("jar", sourcesJar, dokkaJavadocJar, dokkaHtmlJar, "generatePomFileForMavenPublication")
+            dependsOn("jar", sourcesJar, "generatePomFileForMavenPublication")
+            if (extension.withDokka) {
+                dependsOn(dokkaJavadocJar, dokkaHtmlJar)
+            }
             group = "publishing"
             description = "Builds main, sources, javadoc, kdoc jars and the POM."
         }
