@@ -1,48 +1,30 @@
-package io.violabs.plugins.open.publishing.digitalocean
+package io.violabs.plugins.open.publishing.digitalocean.client
 
+import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpacesExtension
+import io.violabs.plugins.open.publishing.digitalocean.adapter.DefaultS3BuilderAdapter
+import io.violabs.plugins.open.publishing.digitalocean.adapter.S3BuilderAdapter
 import org.gradle.api.logging.Logger
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
-import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import java.io.File
-import java.net.URI
-
-abstract class DigitalOceanSpacesClient(
-    val ext: DigitalOceanSpacesExtension,
-    protected val logger: Logger
-) {
-    abstract fun uploadFile(file: File)
-}
-
-class DryRunDigitalOceanSpacesClient(
-    ext: DigitalOceanSpacesExtension,
-    logger: Logger
-) : DigitalOceanSpacesClient(ext, logger) {
-    override fun uploadFile(file: File) {
-        if (!file.exists()) return logger.warn("File ${file.name} does not exist, skipping upload")
-
-        val key = "${ext.artifactPath ?: ""}/${file.name}"
-        logger.lifecycle("Dry run: would upload ${file.name} to ${ext.bucket}/$key")
-    }
-}
 
 class DefaultDigitalOceanSpacesClient(
     ext: DigitalOceanSpacesExtension,
-    logger: Logger
+    logger: Logger,
+    val s3ClientBuilder: (accessKey: String, secretKey: String) -> S3BuilderAdapter = { accessKey, secretKey ->
+        DefaultS3BuilderAdapter(
+            accessKey = accessKey,
+            secretKey = secretKey,
+            endpoint = ext.endpoint,
+            region = ext.region
+        )
+    }
 ) : DigitalOceanSpacesClient(ext, logger) {
     internal fun s3Client(): S3Client {
-        requireNotNull(ext.accessKey) { "accessKey is required" }
-        requireNotNull(ext.secretKey) { "secretKey is required" }
+        val accessKey = requireNotNull(ext.accessKey) { "accessKey is required" }
+        val secretKey = requireNotNull(ext.secretKey) { "secretKey is required" }
 
-        val credentials = AwsBasicCredentials.create(ext.accessKey, ext.secretKey)
-
-        return S3Client.builder()
-            .endpointOverride(URI.create(ext.endpoint))
-            .credentialsProvider(StaticCredentialsProvider.create(credentials))
-            .region(Region.of(ext.region))
-            .build()
+        return s3ClientBuilder(accessKey, secretKey).build()
     }
 
     /**

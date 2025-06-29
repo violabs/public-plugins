@@ -1,3 +1,20 @@
+
+# Commands
+
+## Uploading `publishing/maven-generated-artifacts` recent
+
+```shell
+./gradlew publishing:maven-generated-artifacts:clean publishing:maven-generated-artifacts:uploadToDigitalOceanSpaces
+```
+
+## Uploading `publishing/digital-ocean-spaces` recent
+
+```shell
+./gradlew publishing:digital-ocean-spaces:clean publishing:digital-ocean-spaces:uploadToDigitalOceanSpaces
+```
+
+# Future Implementation
+
 ```kotlin
 abstract class DigitalOceanSpacesExtension {
     abstract val endpoint: Property<String>
@@ -20,4 +37,14 @@ abstract class DigitalOceanSpacesExtension {
         suppressDetailedExceptions.convention(true) // Default to suppressing detailed exceptions
     }
 }
+```
+
+package sub projects
+```kotlin
+    dependsOn(subprojects.map { it.tasks.named("classes") })
+
+    // Pull in each subproject’s compiled classes & resources
+    from(subprojects.map { proj ->
+        proj.extensions.getByType<SourceSetContainer>()["main"].output
+    })
 ```

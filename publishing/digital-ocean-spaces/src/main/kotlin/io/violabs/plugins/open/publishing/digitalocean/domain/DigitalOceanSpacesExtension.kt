@@ -1,4 +1,4 @@
-package io.violabs.plugins.open.publishing.digitalocean
+package io.violabs.plugins.open.publishing.digitalocean.domain
 
 /**
  * Extension for configuring the plugin

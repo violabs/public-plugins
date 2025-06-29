@@ -1,5 +1,6 @@
 package io.violabs.plugins.local.publishing.digitalocean
 
+import io.violabs.plugins.local.secrets.getPropertyOrEnv
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.create
@@ -18,6 +19,11 @@ class DigitalOceanSpacesPublishPlugin : Plugin<Project> {
 
         // Create the extension
         val extension = project.extensions.create<DigitalOceanSpacesExtension>("digitalOceanSpacesPublishing")
+
+        extension.bucket = "open-reliquary"
+        extension.accessKey = project.getPropertyOrEnv("spaces.key")
+        extension.secretKey = project.getPropertyOrEnv("spaces.secret")
+        extension.isPlugin = true
 
         project.afterEvaluate {
             project.logger.lifecycle("Applying DigitalOceanSpacesPublishPlugin to project: ${project.name}")
@@ -52,9 +58,8 @@ class DigitalOceanSpacesPublishPlugin : Plugin<Project> {
                 } else {
                     doSpacesClient
                 }
-                jarQualifier = extension.jarQualifier ?: project.name
+                jarQualifier.set(extension.jarQualifier ?: project.name)
                 checkS3Client = doSpacesClient.s3Client()
-                isPlugin = extension.isPlugin
 
                 dependsOn("build", "assembleMavenArtifacts")
 

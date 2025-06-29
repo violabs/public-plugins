@@ -19,6 +19,15 @@ repositories {
 
 dependencies {
     implementation("software.amazon.awssdk:s3:2.25.27")
+
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("io.mockk:mockk:1.13.8") // For mocking in Kotlin
+    testImplementation(gradleTestKit()) // For Gradle project/test DSLs
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 gradlePlugin {
