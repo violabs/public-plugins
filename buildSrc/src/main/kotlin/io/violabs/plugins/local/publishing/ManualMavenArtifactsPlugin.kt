@@ -7,6 +7,8 @@ import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.*
+import java.io.File
+import java.security.MessageDigest
 
 class ManualMavenArtifactsPlugin : Plugin<Project> {
     override fun apply(project: Project): Unit = project.run {
@@ -34,6 +36,29 @@ class ManualMavenArtifactsPlugin : Plugin<Project> {
         val dokkaHtmlJar = tasks.register<Jar>("dokkaHtmlJar") {
             archiveClassifier.set("kdoc")
             from(tasks.named("dokkaHtml"))
+        }
+
+        tasks.register("generateHashes") {
+            group = "distribution"
+            description = "Generates SHA-256 and SHA-1 hash files for all artifacts."
+
+            doLast {
+                val libsDir = file("${layout.buildDirectory.get()}/libs")
+                libsDir.listFiles()?.forEach { file ->
+                    if (file.isFile) {
+                        listOf("SHA-256", "SHA-1").forEach { algo ->
+                            val hash = file.generateHash(algo)
+                            val ext = when(algo) {
+                                "SHA-1" -> "sha1"
+                                "SHA-256" -> "sha256"
+                                else -> algo.lowercase()
+                            }
+                            file.resolveSibling("${file.name}.$ext").writeText(hash)
+                            logger.lifecycle(" | [INFO] Created file: ${file.name}.$ext")
+                        }
+                    }
+                }
+            }
         }
 
         // Configure publishing
@@ -84,8 +109,24 @@ class ManualMavenArtifactsPlugin : Plugin<Project> {
         // 5) Make a single "assembleMavenArtifacts" umbrella task
         tasks.register("assembleMavenArtifacts") {
             dependsOn("jar", sourcesJar, dokkaJavadocJar, dokkaHtmlJar, "generatePomFileForMavenPublication")
-            group = "publishing"
+            group = "distribution"
             description = "Builds main, sources, javadoc, kdoc jars and the POM."
+            finalizedBy("generateHashes")
         }
     }
+
+
+    fun File.generateHash(hashAlgo: String): String {
+        val buffer = ByteArray(1024 * 4)
+        val md = MessageDigest.getInstance(hashAlgo)
+        inputStream().use { fis ->
+            var bytes = fis.read(buffer)
+            while (bytes >= 0) {
+                if (bytes > 0) md.update(buffer, 0, bytes)
+                bytes = fis.read(buffer)
+            }
+        }
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
 }

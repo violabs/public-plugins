@@ -1,14 +1,22 @@
 package io.violabs.plugins.local.publishing.digitalocean
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.withType
 import software.amazon.awssdk.services.s3.S3Client
 import java.io.File
+import javax.inject.Inject
 
 /**
  * Task to upload project artifacts to Digital Ocean Spaces.
@@ -18,16 +26,23 @@ import java.io.File
  */
 abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
     @get:Input
-    abstract var jarQualifier: String?
-
-    @get:Input
     abstract var checkS3Client: S3Client
 
     @get:Input
     abstract var digitalOceanSpacesClient: DigitalOceanSpacesClient
 
     @get:Input
-    abstract var isPlugin: Boolean
+    abstract val jarQualifier: Property<String>
+
+    @get:Input
+    abstract val version: Property<String>
+
+    @get:Internal  // Not part of task inputs since it's behavior, not data
+    var uploadService: UploadToDigitalOceanSpacesService? = null
+
+    private val extension: DigitalOceanSpacesExtension
+        get() = project.extensions.getByType(DigitalOceanSpacesExtension::class.java)
+
 
     /**
      * Uploads the project's artifacts to Digital Ocean Spaces.
@@ -49,156 +64,14 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
      */
     @TaskAction
     fun uploadToSpaces() {
-        try {
-            DigitalOceanSpacesCheckVersionTask.checkVersion(
-                project,
-                digitalOceanSpacesClient.ext,
-                checkS3Client
-            )
-        } catch (e: Exception) {
-            project.logger.warn("Version check failed, but continuing due to configuration: ${e.message}")
-            return
-        }
-
-        // Get the build directory
-        val buildDir: File = project.layout.buildDirectory.get().asFile
-
-        // Files to upload
-        val filesToUpload: MutableList<File> = nullishMutableListOf(
-            createJar(buildDir),
-            createSourcesJar(buildDir),
-            createJavadocJar(buildDir),
-            createKdocJar(buildDir),
-            createPomFile(buildDir)
+        val service = uploadService ?: UploadToDigitalOceanSpacesService(
+            project,
+            digitalOceanSpacesClient,
+            checkS3Client,
+            jarQualifier.getOrNull(),
+            isPlugin = extension.isPlugin
         )
 
-        // Upload each file
-        filesToUpload.forEach(digitalOceanSpacesClient::uploadFile)
-
-        if (isPlugin) {
-            uploadGeneratedPluginMarkers(buildDir)
-        }
-    }
-
-    /**
-     * Creates a mutable list of non-null items.
-     * This function filters out null values from the provided items and returns a mutable list.
-     *
-     * @param items The items to be included in the list, which can be nullable.
-     * @return A mutable list containing only non-null items.
-     */
-    private fun <T> nullishMutableListOf(vararg items: T?): MutableList<T> {
-        return sequenceOf(*items)
-            .filterNotNull()
-            .toMutableList()
-    }
-
-    /**
-     * Creates the main JAR file for the project.
-     * The JAR file is named using the project name and version.
-     *
-     * @param buildDir The build directory where the JAR file will be created.
-     * @return The created JAR file.
-     */
-    private fun createJar(buildDir: File): File {
-        return File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}.jar")
-    }
-
-    /**
-     * Creates the sources JAR file for the project.
-     * The sources JAR file is named using the project name and version.
-     *
-     * @param buildDir The build directory where the sources JAR file will be created.
-     * @return The created sources JAR file, or null if it does not exist.
-     */
-    private fun createSourcesJar(buildDir: File): File? {
-        return File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}-sources.jar").takeIf { it.exists() }
-    }
-
-    /**
-     * Creates the Javadoc JAR file for the project.
-     * The Javadoc JAR file is named using the project name and version.
-     *
-     * @param buildDir The build directory where the Javadoc JAR file will be created.
-     * @return The created Javadoc JAR file, or null if it does not exist.
-     */
-    private fun createKdocJar(buildDir: File): File? {
-        return File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}-kdoc.jar").takeIf { it.exists() }
-    }
-
-    /**
-     * Creates the Javadoc JAR file for the project.
-     * The Javadoc JAR file is named using the project name and version.
-     *
-     * @param buildDir The build directory where the Javadoc JAR file will be created.
-     * @return The created Javadoc JAR file, or null if it does not exist.
-     */
-    private fun createJavadocJar(buildDir: File): File? {
-        return File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}-javadoc.jar").takeIf { it.exists() }
-    }
-
-    /**
-     * Creates the POM file for the project.
-     * This method copies the generated POM file from the publications directory
-     * to the libs directory with the proper Maven naming convention.
-     *
-     * @param buildDir The build directory where the POM file will be created.
-     * @return The created POM file with proper naming, or null if the source POM does not exist.
-     */
-    private fun createPomFile(buildDir: File): File? {
-        val sourcePom = File(buildDir, "publications/maven/pom-default.xml")
-        if (!sourcePom.exists()) {
-            return null
-        }
-
-        val targetPom = File(buildDir, "libs/${jarQualifier ?: project.name}-${project.version}.pom")
-
-        // Create libs directory if it doesn't exist
-        targetPom.parentFile.mkdirs()
-
-        // Copy the POM file with proper naming
-        sourcePom.copyTo(targetPom, overwrite = true)
-
-        return targetPom
-    }
-
-    private fun uploadGeneratedPluginMarkers(buildDir: File) {
-        val publishing = project.extensions.getByType<PublishingExtension>()
-
-        publishing.publications.withType<MavenPublication>().forEach { publication ->
-            // Look for plugin marker publications (they have names like "pluginMaven")
-            if (publication.name.contains("plugin", ignoreCase = true)) {
-
-                // Get the generated artifacts
-                val pomFile = File(buildDir, "publications/${publication.name}/pom-default.xml")
-
-                val jarFile = File(buildDir, "libs/${publication.artifactId}-${publication.version}.jar")
-
-                if (pomFile.exists()) {
-
-                    val targetPom = File(
-                        buildDir,
-                        "libs/${project.group}.${jarQualifier ?: project.name}.gradle.plugin-${project.version}.pom"
-                    )
-
-                    // Create libs directory if it doesn't exist
-                    targetPom.parentFile.mkdirs()
-
-                    // Copy the POM file with proper naming
-                    pomFile.copyTo(targetPom, overwrite = true)
-                    // Upload with the plugin marker path
-                    val originalPath = digitalOceanSpacesClient.ext.artifactPath
-                    digitalOceanSpacesClient.ext.artifactPath =
-                        "plugins/${publication.groupId.replace('.', '/')}/${publication.artifactId}/${publication.version}"
-
-                    digitalOceanSpacesClient.uploadFile(targetPom)
-                    if (jarFile.exists()) {
-                        digitalOceanSpacesClient.uploadFile(jarFile)
-                    }
-
-                    digitalOceanSpacesClient.ext.artifactPath = originalPath
-                }
-            }
-        }
+        service.uploadToSpaces()
     }
 }

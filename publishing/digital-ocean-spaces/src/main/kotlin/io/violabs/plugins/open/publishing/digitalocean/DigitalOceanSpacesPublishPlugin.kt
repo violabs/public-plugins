@@ -1,5 +1,10 @@
 package io.violabs.plugins.open.publishing.digitalocean
 
+import io.violabs.plugins.open.publishing.digitalocean.client.DefaultDigitalOceanSpacesClient
+import io.violabs.plugins.open.publishing.digitalocean.client.DryRunDigitalOceanSpacesClient
+import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpacesExtension
+import io.violabs.plugins.open.publishing.digitalocean.task.DigitalOceanSpacesCheckVersionTask
+import io.violabs.plugins.open.publishing.digitalocean.task.DigitalOceanSpacesUploadTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.create

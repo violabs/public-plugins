@@ -2,12 +2,9 @@ import io.violabs.plugins.local.secrets.getPropertyOrEnv
 
 plugins {
     `kotlin-dsl`
-    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
     id("org.jetbrains.dokka")
+    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
 }
-
-group = "io.violabs.plugins.open.publishing"
-version = "0.0.2"
 
 buildscript {
     repositories {
@@ -18,40 +15,47 @@ buildscript {
     }
 }
 
-tasks.jar {
-    archiveBaseName.set("maven-generated-artifacts")
-}
-
 repositories {
     // Add any required repositories
     mavenCentral()
 }
 
+dependencies {
+    implementation("software.amazon.awssdk:s3:2.25.27")
+
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("io.mockk:mockk:1.13.8")
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
 gradlePlugin {
     plugins {
-        create("mavenGeneratedArtifacts") {
-            id = "io.violabs.plugins.open.publishing.maven-generated-artifacts"
-            version = project.version.toString()
-            implementationClass = "io.violabs.plugins.open.publishing.ManualMavenArtifactsPlugin"
+        create("digitalOceanSpacesPlugin") {
+            id = "io.violabs.plugins.open.publishing.digital-ocean-spaces"
+            version = "0.0.1"
+            implementationClass = "io.violabs.plugins.open.publishing.digitalocean.DigitalOceanSpacesPublishPlugin"
         }
     }
 }
 
 digitalOceanSpacesPublishing {
+    artifactPath = "plugins/io/violabs/plugins/open/publishing/digital-ocean-spaces/$version"
     bucket = "open-reliquary"
     accessKey = project.getPropertyOrEnv("spaces.key", "DO_SPACES_API_KEY")
     secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
-    artifactPath = "plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
     isPlugin = true
 }
 
 mavenGeneratedArtifacts {
-    name = "Maven Generated Artifacts"
+    name = "Digital Ocean Spaces Publishing"
     description = """
-            This plugin generates Maven artifacts such as sources, Javadoc, and KDoc JARs.
-            It is used to publish these artifacts to a Maven repository or a digital ocean space.
+            This plugin publishes the build jar, sources jar, pom, and optionally dokka jars.
         """
-    websiteUrl = "https://github.com/violabs/public-plugins/tree/main/publishing/maven-generated-artifacts"
+    websiteUrl = "https://github.com/violabs/public-plugins/tree/main/publishing/digital-ocean-spaces"
 
     licenses {
         license {

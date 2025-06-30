@@ -1,5 +1,6 @@
-package io.violabs.plugins.open.publishing.digitalocean
+package io.violabs.plugins.open.publishing.digitalocean.task
 
+import io.violabs.plugins.open.publishing.digitalocean.client.DigitalOceanSpacesClient
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction

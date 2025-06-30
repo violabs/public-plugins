@@ -1,5 +1,6 @@
-package io.violabs.plugins.open.publishing.digitalocean
+package io.violabs.plugins.open.publishing.digitalocean.task
 
+import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpacesExtension
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -49,7 +50,7 @@ abstract class DigitalOceanSpacesCheckVersionTask : DefaultTask() {
 
     /**
      * Checks if the current project version already exists in Digital Ocean Spaces.
-     * If the version exists, it throws a [GradleException] with an error message.
+     * If the version exists, it throws a [org.gradle.api.GradleException] with an error message.
      * If the version does not exist, it logs a notice message.
      * This task is intended to be used in a Gradle build script to prevent
      * accidental overwriting of existing versions in Digital Ocean Spaces.
@@ -62,7 +63,7 @@ abstract class DigitalOceanSpacesCheckVersionTask : DefaultTask() {
      * * The task will also append metadata to the GITHUB_OUTPUT file if it is available.
      * This metadata includes the project version, name, and tag.
      * This is useful for GitHub Actions to capture the version information.
-     * @throws GradleException if the version already exists in Digital Ocean Spaces.
+     * @throws org.gradle.api.GradleException if the version already exists in Digital Ocean Spaces.
      * @throws IllegalArgumentException if any of the required access information is missing.
      */
     @TaskAction
@@ -141,7 +142,7 @@ abstract class DigitalOceanSpacesCheckVersionTask : DefaultTask() {
 
         /**
          * Attempts a check for an existing version in Digital Ocean Spaces.
-         * If the version exists, it throws a [GradleException] with an error message.
+         * If the version exists, it throws a [org.gradle.api.GradleException] with an error message.
          * If it does not exist, it throws [NoSuchKeyException]
          * @param bucket The name of the Digital Ocean Spaces bucket.
          * @param key The key of the object in the bucket.
