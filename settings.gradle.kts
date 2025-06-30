@@ -13,5 +13,5 @@ include(
     "example",
     "publishing",
     "publishing:digital-ocean-spaces",
-    "publishing:maven-generated-artifacts"
+    "publishing:maven-generated-artifacts",
 )

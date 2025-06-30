@@ -16,13 +16,25 @@ repositories {
 allprojects {
     apply {
         plugin("org.jetbrains.dokka")
+        plugin("kotlin")
     }
 
     repositories {
         mavenCentral()
     }
 
+    dependencies {
+        implementation("org.junit.jupiter:junit-jupiter-api:5.13.0-M2")
+        implementation("io.mockk:mockk:1.13.17")
+    }
+
     tasks.withType<Test> {
         useJUnitPlatform()
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
     }
 }

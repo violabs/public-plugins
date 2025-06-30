@@ -9,32 +9,97 @@ import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpaces
 import io.violabs.plugins.open.publishing.digitalocean.service.UploadToDigitalOceanSpacesService
 import org.gradle.api.Project
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
+import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.io.File
 import java.nio.file.Path
 
-class UploadToDigitalOceanSpacesServiceFunctionalTest {
-    val s3Client = mockk<S3Client>()
-    val s3BuilderAdapter = mockk<S3BuilderAdapter>(relaxed = true) {
+class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
+    val s3Client = mockk<S3Client> {
+        every { close() } just Runs
+    }
+
+    val s3BuilderAdapter = mockk<S3BuilderAdapter> {
         every { build() } returns s3Client
     }
+
     val mockVersionCheck: (ProjectAdapter, DigitalOceanSpacesClient, S3Client) -> Unit = mockk(relaxed = true)
 
-    // include the client and the check version task
+    val testBucket = "test-bucket"
+    val givenArtifactPath = "io/violabs/my-lib/1.0.0"
+    val expectedKeyPath = "my-lib-1.0.0"
+    val sharedAccessKey = "test access"
+    val sharedSecretKey = "test secret"
+
+    val digitalOceanSpacesExtension = DigitalOceanSpacesExtension().apply {
+        accessKey = sharedAccessKey
+        secretKey = sharedSecretKey
+        bucket = testBucket
+        artifactPath = givenArtifactPath
+    }
+
+    val digitalOceanSpacesClient = DefaultDigitalOceanSpacesClient(
+        digitalOceanSpacesExtension,
+        logger
+    ) { _, _ -> s3BuilderAdapter }
+
+    // 3 error throws
     @Test
-    fun `uploadSpaces standard library happy path`(@TempDir tempDir: Path) {
-        // Create project adapter inside the test method
+    fun `uploadSpaces throws an exception if access key is missing`(@TempDir tempDir: Path) {
+        val digitalOceanSpacesExtension = DigitalOceanSpacesExtension().apply {
+            accessKey = null
+            secretKey = sharedSecretKey
+            bucket = testBucket
+            artifactPath = givenArtifactPath
+        }
+
+        exceptionTest(tempDir, digitalOceanSpacesExtension, "accessKey is required")
+    }
+
+    @Test
+    fun `uploadSpaces throws an exception if secret key is missing`(@TempDir tempDir: Path) {
+        val digitalOceanSpacesExtension = DigitalOceanSpacesExtension().apply {
+            accessKey = sharedAccessKey
+            secretKey = null
+            bucket = testBucket
+            artifactPath = givenArtifactPath
+        }
+
+        exceptionTest(tempDir, digitalOceanSpacesExtension, "secretKey is required")
+    }
+
+    @Test
+    fun `uploadSpaces throws an exception if bucket is missing`(@TempDir tempDir: Path) {
+        val digitalOceanSpacesExtension = DigitalOceanSpacesExtension().apply {
+            accessKey = sharedAccessKey
+            secretKey = sharedSecretKey
+            bucket = null
+            artifactPath = givenArtifactPath
+        }
+
+        exceptionTest(tempDir, digitalOceanSpacesExtension, "bucket is required")
+    }
+
+    @Test
+    fun `uploadSpaces throws an exception if artifactPath is missing`(@TempDir tempDir: Path) {
+        val digitalOceanSpacesExtension = DigitalOceanSpacesExtension().apply {
+            accessKey = sharedAccessKey
+            secretKey = sharedSecretKey
+            bucket = testBucket
+            artifactPath = null
+        }
+
+        exceptionTest(tempDir, digitalOceanSpacesExtension, "artifactPath is required")
+    }
+
+    private fun exceptionTest(tempDir: Path, extension: DigitalOceanSpacesExtension, expectedMessage: String) {
         val project = TestProjectAdapter(tempDir)
 
-        // Setup file structure
-        createRequiredFileStructure(tempDir.toFile())
-
-        val digitalOceanSpacesExtension = DigitalOceanSpacesExtension()
-        val digitalOceanSpacesClient = DefaultDigitalOceanSpacesClient(
-            digitalOceanSpacesExtension,
-            mockk(relaxed = true)
-        ) { _, _ -> s3BuilderAdapter }
+        val digitalOceanSpacesClient = DefaultDigitalOceanSpacesClient(extension, logger) { _, _ -> s3BuilderAdapter }
 
         val uploadService = UploadToDigitalOceanSpacesService(
             project,
@@ -44,97 +109,54 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest {
             checkVersionFunction = mockVersionCheck
         )
 
-        // When
-        uploadService.uploadToSpaces()
-
-        // Then
-        verify { mockVersionCheck(project, digitalOceanSpacesClient, s3Client) }
-        verify(exactly = 13) { digitalOceanSpacesClient.uploadFile(any<File>()) }
+        assertThrows<IllegalArgumentException> {
+            uploadService.uploadToSpaces()
+        }.apply {
+            assert(message?.contains(expectedMessage) == true)
+        }
     }
 
-//
-//    @Test
-//    fun `uploadSpaces for plugin uploads markers`() {
-//        createRequiredFileStructure()
-//        createPluginFileStructure()
-//
-//        val mockVersionCheck: (ProjectAdapter, DigitalOceanSpacesClient, S3Client) -> Unit =
-//            mockk(relaxed = true)
-//
-//        // Mock the extension for path manipulation
-//        val mockExt = mockk<DigitalOceanSpacesExtension>(relaxed = true)
-//        every { digitalOceanSpacesClient.ext } returns mockExt
-//        every { mockExt.artifactPath } returns "original/path"
-//        every { mockExt.artifactPath = any() } just Runs
-//
-//        val uploadService = UploadToDigitalOceanSpacesService(
-//            project,
-//            digitalOceanSpacesClient,
-//            checkS3Client,
-//            jarQualifier = null,
-//            isPlugin = true,
-//            checkVersionFunction = mockVersionCheck
-//        )
-//
-//        uploadService.uploadToSpaces()
-//
-//        // Verify plugin marker upload path was set
-//        verify { mockExt.artifactPath = "plugins/com/example/my-lib/1.0.0" }
-//
-//        // Verify plugin marker files were uploaded
-//        verify {
-//            digitalOceanSpacesClient.uploadFile(
-//                match<File> { it.name.contains("gradle.plugin") }
-//            )
-//        }
-//    }
-//
-//    private fun createRequiredFileStructure(jarQualifier: String? = null) {
-//        val buildDir = tempDir.toFile()
-//
-//        // Create libs directory
-//        val libsDir = File(buildDir, "libs").apply { mkdirs() }
-//
-//        val baseName = jarQualifier ?: "my-lib"
-//
-//        // Create all required JAR files and their checksums
-//        listOf("", "-sources", "-javadoc", "-kdoc").forEach { suffix ->
-//            File(libsDir, "$baseName-1.0.0$suffix.jar").writeText("dummy jar content")
-//            File(libsDir, "$baseName-1.0.0$suffix.jar.sha1").writeText("dummy-sha1")
-//            File(libsDir, "$baseName-1.0.0$suffix.jar.sha256").writeText("dummy-sha256")
-//        }
-//
-//        // Create publications directory and POM file
-//        val publicationsDir = File(buildDir, "publications/maven").apply { mkdirs() }
-//        File(publicationsDir, "pom-default.xml").writeText("""
-//            <?xml version="1.0" encoding="UTF-8"?>
-//            <project>
-//                <groupId>com.example</groupId>
-//                <artifactId>my-lib</artifactId>
-//                <version>1.0.0</version>
-//            </project>
-//        """.trimIndent())
-//    }
-//
-//    private fun createPluginFileStructure() {
-//        val buildDir = tempDir.toFile()
-//
-//        // Create plugin publication directory
-//        val pluginPublicationDir = File(buildDir, "publications/maven").apply { mkdirs() }
-//        File(pluginPublicationDir, "pom-default.xml").writeText("""
-//            <?xml version="1.0" encoding="UTF-8"?>
-//            <project>
-//                <groupId>com.example</groupId>
-//                <artifactId>my-lib</artifactId>
-//                <version>1.0.0</version>
-//            </project>
-//        """.trimIndent())
-//
-//        // Create the main JAR that would be uploaded as plugin marker
-//        val libsDir = File(buildDir, "libs")
-//        File(libsDir, "my-lib-1.0.0.jar").writeText("plugin jar content")
-//    }
+    @Test
+    fun `uploadSpaces standard library happy path - no artifact path`(@TempDir tempDir: Path) {
+        // Create project adapter inside the test method
+        val project = TestProjectAdapter(tempDir)
 
+        // Setup file structure
+        createRequiredFileStructure(tempDir.toFile())
+
+        val uploadService = UploadToDigitalOceanSpacesService(
+            project,
+            digitalOceanSpacesClient,
+            s3Client,
+            isPlugin = false,
+            checkVersionFunction = mockVersionCheck
+        )
+
+        val jar = TestScenario(testBucket, givenArtifactPath, expectedKeyPath)
+        val sources = jar.copy(prefix = "sources")
+        val javadoc = jar.copy(prefix = "javadoc")
+        val kdoc = jar.copy(prefix = "kdoc")
+        val pom = jar.copy(fileType = "pom")
+
+        everyFileWithShas(jar)
+        everyFileWithShas(sources)
+        everyFileWithShas(javadoc)
+        everyFileWithShas(kdoc)
+        everyFileWithShas(pom)
+
+        uploadService.uploadToSpaces()
+
+        verify { mockVersionCheck(project, digitalOceanSpacesClient, s3Client) }
+
+        verifyFilesWithShas(jar)
+        verifyFilesWithShas(sources)
+        verifyFilesWithShas(javadoc)
+        verifyFilesWithShas(kdoc)
+        verifyFilesWithShas(pom)
+
+        verify { s3Client.close() }
+        confirmVerified(s3Client)
+    }
 
     private fun createRequiredFileStructure(buildDir: File, jarQualifier: String? = null) {
         // Create libs directory
@@ -150,32 +172,91 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest {
         }
 
         // Create publications directory and POM file
-        val publicationsDir = File(buildDir, "publications/maven").apply { mkdirs() }
-        File(publicationsDir, "pom-default.xml").writeText("""
+        File(libsDir, "$baseName-1.0.0.pom").writeText(
+            """
             <?xml version="1.0" encoding="UTF-8"?>
             <project>
                 <groupId>com.example</groupId>
                 <artifactId>my-lib</artifactId>
                 <version>1.0.0</version>
             </project>
-        """.trimIndent())
+        """.trimIndent()
+        )
+        File(libsDir, "$baseName-1.0.0.pom.sha1").writeText("dummy-sha1")
+        File(libsDir, "$baseName-1.0.0.pom.sha256").writeText("dummy-sha256")
     }
 
-    private class TestProjectAdapter(tempDir: Path) : ProjectAdapter {
+    private class TestProjectAdapter(
+        tempDir: Path,
+        override val name: String = "my-lib",
+        override val version: String = "1.0.0"
+    ) : ProjectAdapter {
         override val project: Project = mockk()
         override val buildDir: File = tempDir.toFile()
-        override val name: String = "my-lib"
-        override val version: String = "1.0.0"
 
         override fun pluginAdapters(): List<ProjectAdapter.MavenPublicationAdapter> {
             return listOf(
                 object : ProjectAdapter.MavenPublicationAdapter {
-                    override val groupId: String = "com.example"
+                    override val groupId: String = "io.violabs"
                     override val artifactId: String = "my-lib"
                     override val version: String = "1.0.0"
-                    override val name: String = "maven"
+                    override val name: String = "test"
                 }
             )
         }
     }
+
+    private fun everyFileWithShas(testScenario: TestScenario) {
+        val prefix = testScenario.prefix?.let { "-$it" } ?: ""
+        val givenArtifactPath = testScenario.givenArtifactPath
+        val expectedKeyPath = testScenario.expectedKeyPath
+        val keyBase = "$givenArtifactPath/$expectedKeyPath$prefix.${testScenario.fileType}"
+
+        for (item in listOf(null, "sha1", "sha256")) {
+            val postfix = item?.let { ".$it" } ?: ""
+            every {
+                s3Client.putObject(
+                    match<PutObjectRequest> {
+                        it.bucket() == testScenario.bucket
+                            && it.key() == "$keyBase$postfix"
+                            && it.acl() == ObjectCannedACL.PUBLIC_READ
+                    },
+                    match<Path> {
+                        it.endsWith("libs/$expectedKeyPath$prefix.${testScenario.fileType}$postfix")
+                    }
+                )
+            } returns PutObjectResponse.builder().build()
+        }
+    }
+
+    private fun verifyFilesWithShas(testScenario: TestScenario) {
+        val prefix = testScenario.prefix?.let { "-$it" } ?: ""
+        val givenArtifactPath = testScenario.givenArtifactPath
+        val expectedKeyPath = testScenario.expectedKeyPath
+        val keyBase = "$givenArtifactPath/$expectedKeyPath$prefix.${testScenario.fileType}"
+
+        for (item in listOf(null, "sha1", "sha256")) {
+            val postfix = item?.let { ".$it" } ?: ""
+            verify {
+                s3Client.putObject(
+                    match<PutObjectRequest> {
+                        it.bucket() == testScenario.bucket
+                            && it.key() == "$keyBase$postfix"
+                            && it.acl() == ObjectCannedACL.PUBLIC_READ
+                    },
+                    match<Path> {
+                        it.endsWith("libs/$expectedKeyPath$prefix.${testScenario.fileType}$postfix")
+                    }
+                )
+            }
+        }
+    }
 }
+
+private data class TestScenario(
+    val bucket: String,
+    val givenArtifactPath: String,
+    val expectedKeyPath: String,
+    val prefix: String? = null,
+    val fileType: String = "jar"
+)

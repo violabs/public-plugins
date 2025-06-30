@@ -5,6 +5,7 @@ import io.violabs.plugins.open.publishing.digitalocean.adapter.DefaultS3BuilderA
 import io.violabs.plugins.open.publishing.digitalocean.adapter.S3BuilderAdapter
 import org.gradle.api.logging.Logger
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import java.io.File
 
@@ -34,19 +35,22 @@ class DefaultDigitalOceanSpacesClient(
      * @param file The file to upload.
      */
     override fun uploadFile(file: File) {
+        val bucket = requireNotNull(ext.bucket) { "bucket is required" }
+        val artifactPath = requireNotNull(ext.artifactPath) { "artifactPath is required" }
+
         val client = s3Client()
         try {
             client.use {
                 if (!file.exists()) return@use logger.warn("File ${file.name} does not exist, skipping upload")
 
-                val key = "${ext.artifactPath ?: ""}/${file.name}"
+                val key = "$artifactPath/${file.name}"
 
-                logger.lifecycle("Uploading ${file.name} to ${ext.bucket}/$key")
+                logger.lifecycle("Uploading ${file.name} to ${bucket}/$key")
 
                 val request = PutObjectRequest.builder()
-                    .bucket(ext.bucket)
+                    .bucket(bucket)
                     .key(key)
-                    .acl("public-read")
+                    .acl(ObjectCannedACL.PUBLIC_READ)
                     .build()
 
                 it.putObject(request, file.toPath())

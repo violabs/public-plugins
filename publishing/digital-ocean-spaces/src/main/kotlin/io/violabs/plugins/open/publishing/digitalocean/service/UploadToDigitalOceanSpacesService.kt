@@ -43,29 +43,7 @@ class UploadToDigitalOceanSpacesService(
     private fun createSourcesJar(): Sequence<File> = buildDir.createLibFiles("sources")
     private fun createKdocJar(): Sequence<File> = buildDir.createLibFiles("kdoc")
     private fun createJavadocJar(): Sequence<File> = buildDir.createLibFiles("javadoc")
-
-
-    /**
-     * Creates the POM file for the project.
-     * This method copies the generated POM file from the publications directory
-     * to the libs directory with the proper Maven naming convention.
-     *
-     * @param buildDir The build directory where the POM file will be created.
-     * @return The created POM file with proper naming, or null if the source POM does not exist.
-     */
-    private fun createPomFile(): File {
-        val sourcePom = File(buildDir, "publications/maven/pom-default.xml")
-
-        val targetPom = File(buildDir, "libs/${project.name}-${project.version}.pom")
-
-        // Create libs directory if it doesn't exist
-        targetPom.parentFile.mkdirs()
-
-        // Copy the POM file with proper naming
-        sourcePom.copyTo(targetPom, overwrite = true)
-
-        return targetPom
-    }
+    private fun createPomFile(): Sequence<File> = buildDir.createLibFiles(fileType = "pom")
 
     private fun uploadGeneratedPluginMarkers() {
         project.pluginAdapters().forEach { publication ->
@@ -108,18 +86,17 @@ class UploadToDigitalOceanSpacesService(
         digitalOceanSpacesClient.ext.artifactPath = originalPath
     }
 
-
-    private fun File.createLibFile(preJar: String? = null, postJar: String = ""): File {
+    private fun File.createLibFile(preJar: String? = null, postJar: String = "", fileType: String = "jar"): File {
         val preJar = preJar?.let { "-$it" } ?: ""
-        return File(this, "libs/${project.name}-${project.version}$preJar.jar$postJar")
+        val postJar = if (postJar.isEmpty()) "" else ".$postJar"
+        return File(this, "libs/${project.name}-${project.version}$preJar.$fileType$postJar")
     }
 
-    private fun File.createLibFiles(preJar: String? = null): Sequence<File> {
-        val preJar = preJar?.let { "-$it" } ?: ""
+    private fun File.createLibFiles(preJar: String? = null, fileType: String = "jar"): Sequence<File> {
         return sequenceOf(
-            createLibFile(preJar),
-            createLibFile(preJar, "sha1"),
-            createLibFile(preJar, "sha256")
+            createLibFile(preJar, fileType = fileType),
+            createLibFile(preJar, "sha1", fileType),
+            createLibFile(preJar, "sha256", fileType)
         )
     }
 }
