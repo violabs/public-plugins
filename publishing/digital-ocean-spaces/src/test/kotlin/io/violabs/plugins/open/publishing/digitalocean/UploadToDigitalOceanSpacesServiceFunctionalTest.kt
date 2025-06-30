@@ -117,7 +117,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
     }
 
     @Test
-    fun `uploadSpaces standard library happy path - no artifact path`(@TempDir tempDir: Path) {
+    fun `uploadSpaces standard library happy path`(@TempDir tempDir: Path) {
         // Create project adapter inside the test method
         val project = TestProjectAdapter(tempDir)
 
@@ -158,11 +158,105 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         confirmVerified(s3Client)
     }
 
-    private fun createRequiredFileStructure(buildDir: File, jarQualifier: String? = null) {
+    @Test
+    fun `uploadSpaces plugin library happy path`(@TempDir tempDir: Path) {
+        // Create project adapter inside the test method
+        val project = TestProjectAdapter(tempDir)
+
+        // Setup file structure
+        createRequiredFileStructure(tempDir.toFile(), isPlugin = true)
+
+        val uploadService = UploadToDigitalOceanSpacesService(
+            project,
+            digitalOceanSpacesClient,
+            s3Client,
+            isPlugin = true,
+            checkVersionFunction = mockVersionCheck
+        )
+
+        val jar = TestScenario(testBucket, givenArtifactPath, expectedKeyPath)
+        val sources = jar.copy(prefix = "sources")
+        val javadoc = jar.copy(prefix = "javadoc")
+        val kdoc = jar.copy(prefix = "kdoc")
+        val pom = jar.copy(fileType = "pom")
+
+        everyFileWithShas(jar)
+        everyFileWithShas(sources)
+        everyFileWithShas(javadoc)
+        everyFileWithShas(kdoc)
+        everyFileWithShas(pom)
+        every {
+            s3Client.putObject(
+                match<PutObjectRequest> {
+                    it.bucket() == testBucket
+                        && it.key() == "plugins/io/violabs/my-lib/1.0.0/io.violabs.my-lib.gradle.plugin-1.0.0.pom"
+                        && it.acl() == ObjectCannedACL.PUBLIC_READ
+                },
+                match<Path> {
+                    it.endsWith("libs/io.violabs.my-lib.gradle.plugin-1.0.0.pom")
+                }
+            )
+        } returns PutObjectResponse.builder().build()
+
+        every {
+            s3Client.putObject(
+                match<PutObjectRequest> {
+                    it.bucket() == testBucket
+                        && it.key() == "plugins/io/violabs/my-lib/1.0.0/my-lib-1.0.0.jar"
+                        && it.acl() == ObjectCannedACL.PUBLIC_READ
+                },
+                match<Path> {
+                    it.endsWith("libs/my-lib-1.0.0.jar")
+                }
+            )
+        } returns PutObjectResponse.builder().build()
+
+        uploadService.uploadToSpaces()
+
+        verify { mockVersionCheck(project, digitalOceanSpacesClient, s3Client) }
+
+        verifyFilesWithShas(jar)
+        verifyFilesWithShas(sources)
+        verifyFilesWithShas(javadoc)
+        verifyFilesWithShas(kdoc)
+        verifyFilesWithShas(pom)
+//        verifyFilesWithShas(pluginJar, postfixes = listOf(null))
+//        verifyFilesWithShas(pluginPom)
+        verify {
+            s3Client.putObject(
+                match<PutObjectRequest> {
+                    it.bucket() == testBucket
+                        && it.key() == "plugins/io/violabs/my-lib/1.0.0/io.violabs.my-lib.gradle.plugin-1.0.0.pom"
+                        && it.acl() == ObjectCannedACL.PUBLIC_READ
+                },
+                match<Path> {
+                    it.endsWith("libs/io.violabs.my-lib.gradle.plugin-1.0.0.pom")
+                }
+            )
+        }
+
+        verify {
+            s3Client.putObject(
+                match<PutObjectRequest> {
+                    it.bucket() == testBucket
+                        && it.key() == "plugins/io/violabs/my-lib/1.0.0/my-lib-1.0.0.jar"
+                        && it.acl() == ObjectCannedACL.PUBLIC_READ
+                },
+                match<Path> {
+                    it.endsWith("libs/my-lib-1.0.0.jar")
+                }
+            )
+        }
+
+        verify { s3Client.close() }
+        confirmVerified(s3Client)
+    }
+
+    private fun createRequiredFileStructure(buildDir: File, isPlugin: Boolean = false) {
         // Create libs directory
         val libsDir = File(buildDir, "libs").apply { mkdirs() }
 
-        val baseName = jarQualifier ?: "my-lib"
+        val baseName = "my-lib"
 
         // Create all required JAR files and their checksums
         listOf("", "-sources", "-javadoc", "-kdoc").forEach { suffix ->
@@ -184,6 +278,43 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         )
         File(libsDir, "$baseName-1.0.0.pom.sha1").writeText("dummy-sha1")
         File(libsDir, "$baseName-1.0.0.pom.sha256").writeText("dummy-sha256")
+
+        if (isPlugin) {
+            // make file to handle File(buildDir, "publications/${publication.name}/pom-default.xml")
+            val publicationDir = File(buildDir, "publications").apply {
+                mkdirs()
+            }
+            val testDir = File(publicationDir, "test").apply {
+                mkdirs()
+            }
+            File(testDir, "pom-default.xml").writeText(
+                """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <project>
+                        <groupId>io.violabs</groupId>
+                        <artifactId>my-lib</artifactId>
+                        <version>1.0.0</version>
+                    </project>
+                """.trimIndent()
+            )
+
+            val pluginBase = "io.violabs.$baseName.gradle.plugin-1.0.0.pom"
+
+            File(libsDir, "$pluginBase.sha1").writeText("dummy-sha1")
+            File(libsDir, "$pluginBase.sha256").writeText("dummy-sha256")
+            File(libsDir, "$pluginBase.jar").writeText(
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <project>
+                    <groupId>io.violabs</groupId>
+                    <artifactId>$baseName.gradle.plugin</artifactId>
+                    <version>1.0.0</version>
+                    <name>My Lib Gradle Plugin</name>
+                    <description>A Gradle plugin for My Lib</description>
+                </project>
+            """.trimIndent()
+            )
+        }
     }
 
     private class TestProjectAdapter(
@@ -206,13 +337,14 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         }
     }
 
-    private fun everyFileWithShas(testScenario: TestScenario) {
+    private fun everyFileWithShas(testScenario: TestScenario, postfixes: List<String?> = listOf(null, "sha1", "sha256")) {
         val prefix = testScenario.prefix?.let { "-$it" } ?: ""
         val givenArtifactPath = testScenario.givenArtifactPath
         val expectedKeyPath = testScenario.expectedKeyPath
-        val keyBase = "$givenArtifactPath/$expectedKeyPath$prefix.${testScenario.fileType}"
+        val fileName = testScenario.pathOverride ?: "$expectedKeyPath$prefix.${testScenario.fileType}"
+        val keyBase = "$givenArtifactPath/$fileName"
 
-        for (item in listOf(null, "sha1", "sha256")) {
+        for (item in postfixes) {
             val postfix = item?.let { ".$it" } ?: ""
             every {
                 s3Client.putObject(
@@ -222,20 +354,27 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
                             && it.acl() == ObjectCannedACL.PUBLIC_READ
                     },
                     match<Path> {
-                        it.endsWith("libs/$expectedKeyPath$prefix.${testScenario.fileType}$postfix")
+                        val path = testScenario
+                            .pathOverride
+                            ?: "$expectedKeyPath$prefix.${testScenario.fileType}$postfix"
+                        it.endsWith("libs/$path")
                     }
                 )
             } returns PutObjectResponse.builder().build()
         }
     }
 
-    private fun verifyFilesWithShas(testScenario: TestScenario) {
+    private fun verifyFilesWithShas(
+        testScenario: TestScenario,
+        postfixes: List<String?> = listOf(null, "sha1", "sha256")
+    ) {
         val prefix = testScenario.prefix?.let { "-$it" } ?: ""
         val givenArtifactPath = testScenario.givenArtifactPath
         val expectedKeyPath = testScenario.expectedKeyPath
-        val keyBase = "$givenArtifactPath/$expectedKeyPath$prefix.${testScenario.fileType}"
+        val fileName = testScenario.pathOverride ?: "$expectedKeyPath$prefix.${testScenario.fileType}"
+        val keyBase = "$givenArtifactPath/$fileName"
 
-        for (item in listOf(null, "sha1", "sha256")) {
+        for (item in postfixes) {
             val postfix = item?.let { ".$it" } ?: ""
             verify {
                 s3Client.putObject(
@@ -245,7 +384,9 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
                             && it.acl() == ObjectCannedACL.PUBLIC_READ
                     },
                     match<Path> {
-                        it.endsWith("libs/$expectedKeyPath$prefix.${testScenario.fileType}$postfix")
+                        val path = testScenario
+                            .pathOverride ?: "$expectedKeyPath$prefix.${testScenario.fileType}$postfix"
+                        it.endsWith("libs/$path")
                     }
                 )
             }
@@ -258,5 +399,6 @@ private data class TestScenario(
     val givenArtifactPath: String,
     val expectedKeyPath: String,
     val prefix: String? = null,
-    val fileType: String = "jar"
+    val fileType: String = "jar",
+    val pathOverride: String? = null
 )
