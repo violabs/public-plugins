@@ -2,7 +2,7 @@ import io.violabs.plugins.local.secrets.getPropertyOrEnv
 
 plugins {
     `kotlin-dsl`
-    id("org.jetbrains.dokka")
+    id("org.jetbrains.dokka") version "1.9.20"
     id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
 }
 
