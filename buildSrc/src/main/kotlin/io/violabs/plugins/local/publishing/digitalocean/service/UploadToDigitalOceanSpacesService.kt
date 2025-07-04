@@ -76,7 +76,6 @@ class UploadToDigitalOceanSpacesService(
         digitalOceanSpacesClient.ext.artifactPath = "plugins/$groupPackage/$artifactId/$version"
 
         digitalOceanSpacesClient.uploadFile(targetPom)
-
         if (jarFile.exists()) {
             digitalOceanSpacesClient.uploadFile(jarFile)
         }

@@ -35,7 +35,6 @@ class DigitalOceanSpacesPublishPluginService {
                 this.extension.set(extension)
                 this.s3Client = doSpacesClient.s3Client()
                 continueOnFailure.set(extension.continueOnVersionCheckFailure)
-                dependsOn("assembleMavenArtifacts")
             }
 
             logger.lifecycle(" | [INFO] Registering `uploadToDigitalOceanSpaces` task")

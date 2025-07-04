@@ -6,7 +6,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
-abstract class ProjectSyncTask : DefaultTask() {
+abstract class VerifyProjectSyncTask : DefaultTask() {
     @get:Input
     abstract var extension: ProjectSyncExtension
 
@@ -14,8 +14,6 @@ abstract class ProjectSyncTask : DefaultTask() {
     fun sync(): Unit = project.run {
         val source = extension.syncSource ?: layout.projectDirectory.asFile
         val target = extension.syncTarget ?: throw IllegalArgumentException("syncTarget must be specified.")
-
-        println(target.exists())
 
         val sourceByFileName = source.walkTopDown().associateBy { it.name }
         val targetByFileName = target.walkTopDown().associateBy { it.name }
@@ -43,10 +41,10 @@ abstract class ProjectSyncTask : DefaultTask() {
         sourceByFileName
             .map { (fileName, sourceFile) -> sourceFile to targetByFileName[fileName]!! }
             .filter { (sourceFile, _) -> sourceFile.isFile }
-            .forEach { (sourceFile, targetFile) -> xl(sourceFile, targetFile) }
+            .forEach { (sourceFile, targetFile) -> checkSourceAgainstTarget(sourceFile, targetFile) }
     }
 
-    fun xl(sourceFile: File, targetFile: File) {
+    fun checkSourceAgainstTarget(sourceFile: File, targetFile: File) {
         val sourceFileLines = sourceFile.readLines()
         val targetFileLines = targetFile.readLines()
 
@@ -60,7 +58,7 @@ abstract class ProjectSyncTask : DefaultTask() {
             logger.debug("=========================")
             if (sanitizedSourceLine != sanitizedTargetLine) {
                 val difference = StringUtils.difference(sanitizedSourceLine, sanitizedTargetLine)
-                logger.warn("Difference found: ${difference.replace(" ", ".")}")
+                logger.warn("Difference found in ${sourceFile.name}: ${difference.replace(" ", ".")}")
 
                 if (extension.deviation() == null) {
                     throw IllegalStateException("Source and target files do not match for ${sourceFile.name}.")
@@ -68,29 +66,6 @@ abstract class ProjectSyncTask : DefaultTask() {
                     logger.warn("Source and target files do not match for ${sourceFile.name}. " +
                         "This is expected in this project, but please ensure that the files are in sync.")
                 }
-            }
-        }
-    }
-
-    fun cleanout(sourceFile: File, targetFile: File) {
-        val sanitizedSource = sourceFile.readText().replace(".open", "")
-        val sanitizedTarget = targetFile.readText().replace(".local", "")
-
-        if (sanitizedSource != sanitizedTarget) {
-            val targetLines = sanitizedTarget.lines()
-            sanitizedSource.lines().mapIndexed { index, line ->
-                val targetLine = targetLines[index]
-
-                StringUtils.difference(targetLine, line)
-            }.forEach { difference ->
-                logger.info(difference)
-            }
-
-            if (extension.deviation() == null) {
-                throw IllegalStateException("Source and target files do not match for ${sourceFile.name}.")
-            } else {
-                logger.warn("Source and target files do not match for ${sourceFile.name}. " +
-                    "This is expected in this project, but please ensure that the files are in sync.")
             }
         }
     }
