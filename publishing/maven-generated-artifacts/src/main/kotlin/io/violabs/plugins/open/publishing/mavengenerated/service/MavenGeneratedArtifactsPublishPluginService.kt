@@ -17,10 +17,12 @@ import java.io.File
 import java.security.MessageDigest
 
 
-class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedArtifactsPublishPluginService.Params>  {
+open class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedArtifactsPublishPluginService.Params>  {
     interface Params : BuildServiceParameters
 
     override fun getParameters(): Params = object : Params {}
+
+    protected var testHook: (ManualMavenArtifactsExtension) -> Unit = {}
 
     fun apply(project: Project) = project.run {
         pluginManager.apply("java")
@@ -28,6 +30,8 @@ class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedA
         pluginManager.apply("maven-publish")
 
         val extension = project.extensions.create<ManualMavenArtifactsExtension>("mavenGeneratedArtifacts")
+
+
 
         val sourceSets = project.extensions.getByType<SourceSetContainer>()
 
@@ -124,6 +128,8 @@ class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedA
             description = "Builds main, sources, javadoc, kdoc jars and the POM."
             finalizedBy("generateHashes")
         }
+
+        project
     }
 
     fun File.generateHash(hashAlgo: String): String {

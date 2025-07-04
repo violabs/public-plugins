@@ -124,6 +124,8 @@ class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedA
             description = "Builds main, sources, javadoc, kdoc jars and the POM."
             finalizedBy("generateHashes")
         }
+
+        project
     }
 
     fun File.generateHash(hashAlgo: String): String {

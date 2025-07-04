@@ -31,6 +31,10 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    testImplementation(gradleTestKit())
+}
+
 projectSync {
     val projectFile = rootProject.layout
         .projectDirectory
@@ -46,7 +50,7 @@ gradlePlugin {
         create("mavenGeneratedArtifactsPlugin") {
             id = "io.violabs.plugins.open.publishing.maven-generated-artifacts"
             version = project.version.toString()
-            implementationClass = "io.violabs.plugins.open.publishing.MavenGeneratedArtifactsPlugin"
+            implementationClass = "io.violabs.plugins.open.publishing.mavengenerated.MavenGeneratedArtifactsPlugin"
         }
     }
 }

@@ -28,7 +28,9 @@ allprojects {
 
     dependencies {
         implementation("org.junit.jupiter:junit-jupiter-api:5.13.0-M2")
-        implementation("io.mockk:mockk:1.13.17")
+        testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+        testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+        testImplementation("io.mockk:mockk:1.13.8")
     }
 
     tasks.withType<Test> {
