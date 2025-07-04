@@ -4,10 +4,12 @@ import io.mockk.*
 import io.violabs.plugins.open.publishing.digitalocean.adapter.ProjectAdapter
 import io.violabs.plugins.open.publishing.digitalocean.adapter.S3BuilderAdapter
 import io.violabs.plugins.open.publishing.digitalocean.client.DefaultDigitalOceanSpacesClient
-import io.violabs.plugins.open.publishing.digitalocean.client.DigitalOceanSpacesClient
 import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpacesExtension
+import io.violabs.plugins.open.publishing.digitalocean.service.CheckVersionDigitalOceanSpacesService
 import io.violabs.plugins.open.publishing.digitalocean.service.UploadToDigitalOceanSpacesService
 import org.gradle.api.Project
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -27,7 +29,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         every { build() } returns s3Client
     }
 
-    val mockVersionCheck: (ProjectAdapter, DigitalOceanSpacesClient, S3Client) -> Unit = mockk(relaxed = true)
+    val mockVersionCheck: CheckVersionDigitalOceanSpacesService = mockk()
 
     val testBucket = "test-bucket"
     val givenArtifactPath = "io/violabs/my-lib/1.0.0"
@@ -106,14 +108,20 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
             digitalOceanSpacesClient,
             s3Client,
             isPlugin = false,
-            checkVersionFunction = mockVersionCheck
+            mockVersionCheck
         )
+
+        every { mockVersionCheck.checkVersion(any(), any(), any()) } just Runs
 
         assertThrows<IllegalArgumentException> {
             uploadService.uploadToSpaces()
         }.apply {
             assert(message?.contains(expectedMessage) == true)
         }
+
+        verify { mockVersionCheck.checkVersion(any(), any(), any()) }
+
+        confirmVerified(s3Client, mockVersionCheck)
     }
 
     @Test
@@ -129,7 +137,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
             digitalOceanSpacesClient,
             s3Client,
             isPlugin = false,
-            checkVersionFunction = mockVersionCheck
+            mockVersionCheck
         )
 
         val jar = TestScenario(testBucket, givenArtifactPath, expectedKeyPath)
@@ -137,6 +145,8 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         val javadoc = jar.copy(prefix = "javadoc")
         val kdoc = jar.copy(prefix = "kdoc")
         val pom = jar.copy(fileType = "pom")
+
+        every { mockVersionCheck.checkVersion(any(), any(), any()) } just Runs
 
         everyFileWithShas(jar)
         everyFileWithShas(sources)
@@ -146,16 +156,17 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
 
         uploadService.uploadToSpaces()
 
-        verify { mockVersionCheck(project, digitalOceanSpacesClient, s3Client) }
-
         verifyFilesWithShas(jar)
         verifyFilesWithShas(sources)
         verifyFilesWithShas(javadoc)
         verifyFilesWithShas(kdoc)
         verifyFilesWithShas(pom)
 
-        verify { s3Client.close() }
-        confirmVerified(s3Client)
+        verify(atLeast = 1) { s3Client.close() }
+
+        verify { mockVersionCheck.checkVersion(any(), any(), any()) }
+
+        confirmVerified(s3Client, mockVersionCheck)
     }
 
     @Test
@@ -171,7 +182,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
             digitalOceanSpacesClient,
             s3Client,
             isPlugin = true,
-            checkVersionFunction = mockVersionCheck
+            mockVersionCheck
         )
 
         val jar = TestScenario(testBucket, givenArtifactPath, expectedKeyPath)
@@ -179,6 +190,8 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         val javadoc = jar.copy(prefix = "javadoc")
         val kdoc = jar.copy(prefix = "kdoc")
         val pom = jar.copy(fileType = "pom")
+
+        every { mockVersionCheck.checkVersion(any(), any(), any()) } just Runs
 
         everyFileWithShas(jar)
         everyFileWithShas(sources)
@@ -213,15 +226,14 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
 
         uploadService.uploadToSpaces()
 
-        verify { mockVersionCheck(project, digitalOceanSpacesClient, s3Client) }
-
         verifyFilesWithShas(jar)
         verifyFilesWithShas(sources)
         verifyFilesWithShas(javadoc)
         verifyFilesWithShas(kdoc)
         verifyFilesWithShas(pom)
-//        verifyFilesWithShas(pluginJar, postfixes = listOf(null))
-//        verifyFilesWithShas(pluginPom)
+
+        verify(atLeast = 1) { s3Client.close() }
+
         verify {
             s3Client.putObject(
                 match<PutObjectRequest> {
@@ -248,8 +260,9 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
             )
         }
 
-        verify { s3Client.close() }
-        confirmVerified(s3Client)
+        verify { mockVersionCheck.checkVersion(any(), any(), any()) }
+
+        confirmVerified(s3Client, mockVersionCheck)
     }
 
     private fun createRequiredFileStructure(buildDir: File, isPlugin: Boolean = false) {
@@ -324,6 +337,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
     ) : ProjectAdapter {
         override val project: Project = mockk()
         override val buildDir: File = tempDir.toFile()
+        override val logger: Logger = Logging.getLogger(UploadToDigitalOceanSpacesServiceFunctionalTest::class.java)
 
         override fun pluginAdapters(): List<ProjectAdapter.MavenPublicationAdapter> {
             return listOf(
@@ -337,7 +351,10 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         }
     }
 
-    private fun everyFileWithShas(testScenario: TestScenario, postfixes: List<String?> = listOf(null, "sha1", "sha256")) {
+    private fun everyFileWithShas(
+        testScenario: TestScenario,
+        postfixes: List<String?> = listOf(null, "sha1", "sha256")
+    ) {
         val prefix = testScenario.prefix?.let { "-$it" } ?: ""
         val givenArtifactPath = testScenario.givenArtifactPath
         val expectedKeyPath = testScenario.expectedKeyPath

@@ -1,4 +1,4 @@
-package io.violabs.plugins.open.publishing.digitalocean.adapter
+package io.violabs.plugins.local.publishing.digitalocean.adapter
 
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger

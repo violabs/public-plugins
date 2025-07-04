@@ -1,7 +1,7 @@
-package io.violabs.plugins.open.publishing.digitalocean.service
+package io.violabs.plugins.local.publishing.digitalocean.service
 
-import io.violabs.plugins.open.publishing.digitalocean.adapter.ProjectAdapter
-import io.violabs.plugins.open.publishing.digitalocean.client.DigitalOceanSpacesClient
+import io.violabs.plugins.local.publishing.digitalocean.adapter.ProjectAdapter
+import io.violabs.plugins.local.publishing.digitalocean.client.DigitalOceanSpacesClient
 import org.gradle.api.GradleException
 import software.amazon.awssdk.services.s3.S3Client
 import java.io.File
@@ -76,6 +76,7 @@ class UploadToDigitalOceanSpacesService(
         digitalOceanSpacesClient.ext.artifactPath = "plugins/$groupPackage/$artifactId/$version"
 
         digitalOceanSpacesClient.uploadFile(targetPom)
+
         if (jarFile.exists()) {
             digitalOceanSpacesClient.uploadFile(jarFile)
         }

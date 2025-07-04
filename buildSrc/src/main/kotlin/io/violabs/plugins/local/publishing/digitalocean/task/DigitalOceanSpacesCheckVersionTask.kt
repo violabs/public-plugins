@@ -1,8 +1,8 @@
-package io.violabs.plugins.open.publishing.digitalocean.task
+package io.violabs.plugins.local.publishing.digitalocean.task
 
-import io.violabs.plugins.open.publishing.digitalocean.adapter.DefaultProjectAdapter
-import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpacesExtension
-import io.violabs.plugins.open.publishing.digitalocean.service.CheckVersionDigitalOceanSpacesService
+import io.violabs.plugins.local.publishing.digitalocean.adapter.DefaultProjectAdapter
+import io.violabs.plugins.local.publishing.digitalocean.domain.DigitalOceanSpacesExtension
+import io.violabs.plugins.local.publishing.digitalocean.service.CheckVersionDigitalOceanSpacesService
 import org.gradle.api.DefaultTask
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input

@@ -13,6 +13,9 @@ repositories {
     mavenCentral()
 }
 
+extra["publishingDigitalOceanSpacesVersion"] = "0.0.2"
+extra["publishingMavenGeneratedArtifactsVersion"] = "0.0.3"
+
 allprojects {
     apply {
         plugin("org.jetbrains.dokka")

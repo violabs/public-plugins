@@ -1,6 +1,6 @@
-package io.violabs.plugins.open.publishing.digitalocean.client
+package io.violabs.plugins.local.publishing.digitalocean.client
 
-import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpacesExtension
+import io.violabs.plugins.local.publishing.digitalocean.domain.DigitalOceanSpacesExtension
 import org.gradle.api.logging.Logger
 import java.io.File
 

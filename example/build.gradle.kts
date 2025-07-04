@@ -1,5 +1,5 @@
 plugins {
-    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
+//    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
     id("io.violabs.plugins.local.secrets.loader")
     id("org.jetbrains.dokka") version "1.9.20"
 }
