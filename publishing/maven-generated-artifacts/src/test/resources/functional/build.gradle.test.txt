@@ -1,0 +1,15 @@
+plugins {
+    id("io.violabs.plugins.open.publishing.maven-generated-artifacts")
+    id("org.jetbrains.dokka") version "1.9.20"
+}
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}
+
+mavenGeneratedArtifacts {
+    scm {
+        connection.set("github.com/violabs/${project.name}.git")
+    }
+}

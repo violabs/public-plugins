@@ -1,6 +1,11 @@
 package io.violabs.plugins.local.publishing.mavengenerated.domain
 
-open class ManualMavenArtifactsExtension {
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import javax.inject.Inject
+
+open class ManualMavenArtifactsExtension @Inject constructor(private val objectFactory: ObjectFactory) {
+    var publicationName: String = "maven"
     var withDokka: Boolean = true
     var name: String? = null
     var description: String? = null
@@ -26,7 +31,7 @@ open class ManualMavenArtifactsExtension {
     }
 
     fun scm(block: Scm.() -> Unit) {
-        this.scm = Scm().apply(block)
+        this.scm = Scm(objectFactory).apply(block)
     }
 
     fun scm(): Scm? {
@@ -71,8 +76,8 @@ open class ManualMavenArtifactsExtension {
         }
     }
 
-    class Scm {
-        var connection: String? = null
+    class Scm(objectFactory: ObjectFactory) {
+        val connection: Property<String?> = objectFactory.property(String::class.java).convention(null)
         var developerConnection: String? = null
         var url: String? = null
     }

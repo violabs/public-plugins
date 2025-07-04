@@ -1,5 +1,6 @@
 plugins {
 //    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
+    id("io.violabs.plugins.local.publishing.maven-generated-artifacts")
     id("io.violabs.plugins.local.secrets.loader")
     id("org.jetbrains.dokka") version "1.9.20"
 }
@@ -10,6 +11,12 @@ secretsLoader {
     // Or you can use system properties to load secrets
     systemProperties {
         addProperty("apiKey", "API_KEY")
+    }
+}
+
+mavenGeneratedArtifacts {
+    scm {
+        connection = "github.com/violabs/${project.name}.git"
     }
 }
 

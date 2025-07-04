@@ -10,7 +10,7 @@ class FunctionalPluginTest {
     fun `plugin applies happy path`(@TempDir dir: File) {
         // 1) Create a minimal build file
         File(dir, "settings.gradle.kts").writeText("""rootProject.name = "test"""")
-        File(dir, "build.gradle.kts").writeText(
+        File(dir, "build.gradle.test.txt").writeText(
             """
               plugins {
                 id("io.violabs.plugins.open.publishing.maven-generated-artifacts")

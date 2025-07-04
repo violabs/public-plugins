@@ -2,11 +2,13 @@ package io.violabs.plugins.local.publishing.mavengenerated.service
 
 import io.violabs.plugins.local.publishing.mavengenerated.domain.ManualMavenArtifactsExtension
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.create
@@ -17,46 +19,76 @@ import java.io.File
 import java.security.MessageDigest
 
 
-class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedArtifactsPublishPluginService.Params>  {
+open class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedArtifactsPublishPluginService.Params>  {
     interface Params : BuildServiceParameters
 
     override fun getParameters(): Params = object : Params {}
 
-    fun apply(project: Project) = project.run {
+    fun apply(project: Project): Project = project.run {
         pluginManager.apply("java")
-        pluginManager.apply("org.jetbrains.dokka")
         pluginManager.apply("maven-publish")
 
         val extension = project.extensions.create<ManualMavenArtifactsExtension>("mavenGeneratedArtifacts")
 
-        val sourceSets = project.extensions.getByType<SourceSetContainer>()
+        project.afterEvaluate {
+            val sourcesJar: TaskProvider<Jar> = createSourcesJar()
 
-        // 1) Sources JAR
-        val sourcesJar = tasks.register<Jar>("sourcesJar") {
+            val (dokkaJavadocJar, dokkaHtmlJar) = createDokkaTasksIfPluginEnabled(extension)
+
+            val jarTasks: MutableList<TaskProvider<Jar>> = nonNullMutableList(sourcesJar, dokkaJavadocJar, dokkaHtmlJar)
+
+            configurePom(extension, artifactProviders = jarTasks)
+
+            val generateHashTask = addGenerateHashesTask()
+
+            addAssembleMavenArtifactsTask(dependsOn = jarTasks, finalizedBy = generateHashTask)
+        }
+
+        return project
+    }
+
+    private fun Project.createSourcesJar(): TaskProvider<Jar> {
+        val sourceSets = extensions.getByType<SourceSetContainer>()
+
+        return tasks.register<Jar>("sourcesJar") {
             archiveClassifier.set("sources")
             from(sourceSets["main"].allSource)
         }
+    }
 
-        // 2) Dokka Javadoc JAR
-        val dokkaJavadocJar = tasks.register<Jar>("dokkaJavadocJar") {
-            archiveClassifier.set("javadoc")
-            from(tasks.named("dokkaJavadoc"))
+    private fun Project.createDokkaTasksIfPluginEnabled(
+        extension: ManualMavenArtifactsExtension
+    ): Pair<TaskProvider<Jar>?, TaskProvider<Jar>?> {
+        var dokkaJavadocJar: TaskProvider<Jar>? = null
+        var dokkaHtmlJar: TaskProvider<Jar>?  = null
+
+        if (extension.withDokka) {
+            pluginManager.apply("org.jetbrains.dokka")
+            dokkaJavadocJar = tasks.register<Jar>("dokkaJavadocJar") {
+                archiveClassifier.set("javadoc")
+                from(tasks.named("dokkaJavadoc"))
+            }
+
+            dokkaHtmlJar = tasks.register<Jar>("dokkaHtmlJar") {
+                archiveClassifier.set("kdoc")
+                from(tasks.named("dokkaHtml"))
+            }
         }
 
-        // 3) Dokka HTML/KDoc JAR
-        val dokkaHtmlJar = tasks.register<Jar>("dokkaHtmlJar") {
-            archiveClassifier.set("kdoc")
-            from(tasks.named("dokkaHtml"))
-        }
+        return dokkaJavadocJar to dokkaHtmlJar
+    }
 
-        // Configure publishing
+    private fun Project.configurePom(
+        extension: ManualMavenArtifactsExtension,
+        artifactProviders: List<TaskProvider<Jar>>
+    ) {
         extensions.configure<PublishingExtension> {
             publications {
-                create<MavenPublication>("maven") {
+                create<MavenPublication>(extension.publicationName) {
                     from(components["java"])
-                    artifact(sourcesJar)
-                    artifact(dokkaJavadocJar)
-                    artifact(dokkaHtmlJar)
+                    artifactProviders.forEach { artifact ->
+                        artifact(artifact)
+                    }
 
                     pom {
                         name.set(extension.name)
@@ -83,21 +115,27 @@ class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedA
                         }
                         scm {
                             val scm = extension.scm()
-                            val connectionLocation = scm?.connection ?: "github.com/violabs/${project.name}.git"
-                            val developerConnectionLocation = scm?.developerConnection ?: connection
+                            val connectionLocation = scm?.connection
+                                ?: throw IllegalArgumentException("SCM connection is required")
+                            val developerConnectionLocation = scm.developerConnection ?: connection
                             connection.set("scm:git:git://$connectionLocation")
                             developerConnection.set("scm:git:ssh://$developerConnectionLocation")
-                            url.set(scm?.url ?: extension.websiteUrl)
+                            url.set(scm.url ?: extension.websiteUrl)
                         }
                     }
                 }
             }
         }
+    }
 
-        tasks.register("generateHashes") {
+    fun <T> nonNullMutableList(vararg items: T?): MutableList<T> = sequenceOf(*items)
+        .filterNotNull()
+        .toMutableList()
+
+    fun Project.addGenerateHashesTask(): TaskProvider<Task> {
+        return tasks.register("generateHashes") {
             group = "distribution"
             description = "Generates SHA-256 and SHA-1 hash files for all artifacts."
-
             doLast {
                 val libsDir = file("${layout.buildDirectory.get()}/libs")
                 libsDir.listFiles()?.forEach { file ->
@@ -116,16 +154,19 @@ class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedA
                 }
             }
         }
+    }
 
-        // 5) Make a single "assembleMavenArtifacts" umbrella task
+    fun Project.addAssembleMavenArtifactsTask(
+        dependsOn: MutableList<TaskProvider<Jar>>,
+        finalizedBy: TaskProvider<Task>
+    ) {
         tasks.register("assembleMavenArtifacts") {
-            dependsOn("jar", sourcesJar, dokkaJavadocJar, dokkaHtmlJar, "generatePomFileForMavenPublication")
             group = "distribution"
             description = "Builds main, sources, javadoc, kdoc jars and the POM."
-            finalizedBy("generateHashes")
+            dependsOn("jar", "generatePomFileForMavenPublication")
+            dependsOn(*dependsOn.toTypedArray())
+            finalizedBy(finalizedBy)
         }
-
-        project
     }
 
     fun File.generateHash(hashAlgo: String): String {
