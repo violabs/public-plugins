@@ -57,8 +57,8 @@ class DigitalOceanSpacesPublishPluginService {
 
                 // If using the maven-publish plugin, also depend on publish tasks
                 plugins.withId("maven-publish") {
-                    dependsOn("publishToMavenLocal")
-                    dependsOn("generatePomFileForMavenPublication")
+//                    dependsOn("publishToMavenLocal")
+                    dependsOn("generatePomFileForDigitalOceanSpacesPublication")
                 }
             }
         }

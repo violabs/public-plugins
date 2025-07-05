@@ -19,6 +19,7 @@ class DefaultProjectAdapter(
         return project.extensions.getByType<PublishingExtension>()
             .publications
             .withType<MavenPublication>()
+            .matching { it.name == "digitalOceanSpaces" }
             .map { publication ->
                 DefaultMavenPublicationAdapter(
                     groupId = publication.groupId ?: project.group.toString(),

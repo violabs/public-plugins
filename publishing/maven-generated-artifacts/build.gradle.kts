@@ -62,9 +62,11 @@ digitalOceanSpacesPublishing {
     secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
     artifactPath = "plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
     isPlugin = true
+    dryRun = true
 }
 
 mavenGeneratedArtifacts {
+    publicationName = "digitalOceanSpaces"
     name = "Maven Generated Artifacts"
     description = """
             This plugin generates Maven artifacts such as sources, Javadoc, and KDoc JARs.

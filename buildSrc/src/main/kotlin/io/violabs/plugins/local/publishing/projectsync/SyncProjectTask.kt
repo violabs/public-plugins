@@ -6,6 +6,8 @@ import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 abstract class SyncProjectTask : DefaultTask() {
     @get:Input
@@ -13,6 +15,7 @@ abstract class SyncProjectTask : DefaultTask() {
 
     @TaskAction
     fun sync() = project.run {
+        val saved = layout.buildDirectory.dir("projectSync").get().asFile
         val source = extension.syncSource ?: layout.projectDirectory.asFile
         val target = extension.syncTarget ?: throw IllegalArgumentException("syncTarget must be specified.")
 
@@ -21,17 +24,30 @@ abstract class SyncProjectTask : DefaultTask() {
 
         logger.lifecycle("Syncing project files from $source to $target")
 
+        // 1) make sure our backup root exists
+        saved.mkdirs()
+
+        // 2) if there's already a target tree, back it up under projectSync/<timestamp>
+        if (target.exists()) {
+            val timestamp = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+            val backupDir = File(saved, timestamp)
+            logger.lifecycle("Backing up existing $target → $backupDir")
+            backupDir.mkdirs()
+            target.copyRecursively(backupDir, overwrite = true)
+        }
+
         source.walkTopDown()
             .filter { it.isFile }
             .forEach { file ->
                 // relative path under “open”
-                val rel   = srcPath.relativize(file.toPath()).toString()
+                val rel = srcPath.relativize(file.toPath()).toString()
                 // swap “open” → “local” in the path
                 val fixed = rel.replace(
                     "${File.separator}open${File.separator}",
                     "${File.separator}local${File.separator}"
                 )
-                val dest  = tgtPath.resolve(fixed)
+                val dest = tgtPath.resolve(fixed)
 
                 Files.createDirectories(dest.parent)
 
@@ -55,8 +71,7 @@ abstract class SyncProjectTask : DefaultTask() {
                         // (optional) if you have other in-code references use a catch-all:
                         .replace("plugins.open.", "plugins.local.")
                     dest.toFile().writeText(updated)
-                }
-                else {
+                } else {
                     Files.copy(file.toPath(), dest, StandardCopyOption.REPLACE_EXISTING)
                 }
 

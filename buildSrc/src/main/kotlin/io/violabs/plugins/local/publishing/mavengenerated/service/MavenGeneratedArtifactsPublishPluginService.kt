@@ -41,7 +41,11 @@ open class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGener
 
             val generateHashTask = addGenerateHashesTask()
 
-            addAssembleMavenArtifactsTask(dependsOn = jarTasks, finalizedBy = generateHashTask)
+            addAssembleMavenArtifactsTask(
+                extension.publicationName,
+                dependsOn = jarTasks,
+                finalizedBy = generateHashTask
+            )
         }
 
         return project
@@ -157,13 +161,16 @@ open class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGener
     }
 
     fun Project.addAssembleMavenArtifactsTask(
+        publicationName: String = "maven",
         dependsOn: MutableList<TaskProvider<Jar>>,
         finalizedBy: TaskProvider<Task>
     ) {
+        val capitalizedPublicationName = publicationName.replaceFirstChar { it.uppercase() }
+
         tasks.register("assembleMavenArtifacts") {
             group = "distribution"
             description = "Builds main, sources, javadoc, kdoc jars and the POM."
-            dependsOn("jar", "generatePomFileForMavenPublication")
+            dependsOn("jar", "generatePomFileFor${capitalizedPublicationName}Publication")
             dependsOn(*dependsOn.toTypedArray())
             finalizedBy(finalizedBy)
         }

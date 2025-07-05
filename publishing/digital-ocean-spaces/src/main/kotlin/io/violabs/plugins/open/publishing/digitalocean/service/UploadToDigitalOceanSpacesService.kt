@@ -53,12 +53,21 @@ class UploadToDigitalOceanSpacesService(
         val artifactId = publication.artifactId
         val version = publication.version
 
+        println("[DEBUG] Handling plugin marker ${publication.name}")
+        val pomLocation = File(buildDir, "publications/${publication.name}")
+        println("[DEBUG] POM location: ${pomLocation.absolutePath}")
+        println("[DEBUG] exists: ${pomLocation.exists()}")
+        pomLocation.listFiles()?.forEach {
+            println("[DEBUG] POM file: ${it.name} exists: ${it.exists()}")
+        }
         // Get the generated artifacts
         val pomFile = File(buildDir, "publications/${publication.name}/pom-default.xml")
 
         val jarFile = File(buildDir, "libs/$artifactId-${publication.version}.jar")
 
         if (!pomFile.exists()) throw IllegalStateException("POM file does not exist: ${pomFile.absolutePath}")
+
+        println("[DEBUG] Uploading plugin marker for $groupId:$artifactId:$version")
 
         val targetPom = File(
             buildDir,
