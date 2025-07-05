@@ -84,9 +84,9 @@ class UploadToDigitalOceanSpacesService(
     }
 
     private fun File.createLibFile(preJar: String? = null, postJar: String = "", fileType: String = "jar"): File {
-        val preJar = preJar?.let { "-$it" } ?: ""
-        val postJar = if (postJar.isEmpty()) "" else ".$postJar"
-        return File(this, "libs/${project.name}-${project.version}$preJar.$fileType$postJar")
+        val preJarSetup = preJar?.let { "-$it" } ?: ""
+        val postJarSetup = if (postJar.isEmpty()) "" else ".$postJar"
+        return File(this, "libs/${project.name}-${project.version}$preJarSetup.$fileType$postJarSetup")
     }
 
     private fun File.createLibFiles(preJar: String? = null, fileType: String = "jar"): Sequence<File> {

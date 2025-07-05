@@ -33,6 +33,7 @@ repositories {
 
 dependencies {
     testImplementation(gradleTestKit())
+    testImplementation(project(":test-core"))
 }
 
 projectSync {

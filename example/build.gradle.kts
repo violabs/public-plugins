@@ -1,5 +1,5 @@
 plugins {
-//    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
+    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
     id("io.violabs.plugins.local.publishing.maven-generated-artifacts")
     id("io.violabs.plugins.local.secrets.loader")
     id("org.jetbrains.dokka") version "1.9.20"
@@ -21,12 +21,9 @@ mavenGeneratedArtifacts {
 }
 
 //digitalOceanSpacesPublishing {
-//    bucket = "my-example-bucket"
-//    endpoint = "nyc10.digitaloceanspaces.com" // override default
-//    region = "nyc10" // override default
-//    artifactPath = "here-is-my-jar"
-//    // from secrets loader plugin
-//    accessKey = project.getPropertyOrEnv("API_KEY")
-//    secretKey = project.getPropertyOrEnv("API_SECRET")
-//    dryRun = true // Set to true for dry run mode, no files will be uploaded
+//    bucket = "open-reliquary"
+//    accessKey = project.getPropertyOrEnv("spaces.key", "DO_SPACES_API_KEY")
+//    secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
+//    artifactPath = "plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
+//    isPlugin = true
 //}

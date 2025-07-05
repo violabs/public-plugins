@@ -23,4 +23,5 @@ include(
     "example",
     "publishing:digital-ocean-spaces",
     "publishing:maven-generated-artifacts",
+    "test-core"
 )
