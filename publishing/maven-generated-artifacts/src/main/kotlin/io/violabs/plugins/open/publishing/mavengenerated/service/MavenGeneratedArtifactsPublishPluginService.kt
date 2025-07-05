@@ -10,16 +10,12 @@ import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
-import org.gradle.kotlin.dsl.configure
-import org.gradle.kotlin.dsl.create
-import org.gradle.kotlin.dsl.get
-import org.gradle.kotlin.dsl.getByType
-import org.gradle.kotlin.dsl.register
+import org.gradle.kotlin.dsl.*
 import java.io.File
 import java.security.MessageDigest
 
-
-open class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGeneratedArtifactsPublishPluginService.Params>  {
+open class MavenGeneratedArtifactsPublishPluginService :
+    BuildService<MavenGeneratedArtifactsPublishPluginService.Params> {
     interface Params : BuildServiceParameters
 
     override fun getParameters(): Params = object : Params {}
@@ -64,7 +60,7 @@ open class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGener
         extension: ManualMavenArtifactsExtension
     ): Pair<TaskProvider<Jar>?, TaskProvider<Jar>?> {
         var dokkaJavadocJar: TaskProvider<Jar>? = null
-        var dokkaHtmlJar: TaskProvider<Jar>?  = null
+        var dokkaHtmlJar: TaskProvider<Jar>? = null
 
         if (extension.withDokka) {
             pluginManager.apply("org.jetbrains.dokka")
@@ -120,11 +116,10 @@ open class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGener
                         scm {
                             val scm = extension.scm()
                             val connectionLocation = scm?.connection
-                                ?: throw IllegalArgumentException("SCM connection is required")
-                            val developerConnectionLocation = scm.developerConnection ?: connection
+                            val developerConnectionLocation = scm?.developerConnection ?: connection
                             connection.set("scm:git:git://$connectionLocation")
                             developerConnection.set("scm:git:ssh://$developerConnectionLocation")
-                            url.set(scm.url ?: extension.websiteUrl)
+                            url.set(scm?.url ?: extension.websiteUrl)
                         }
                     }
                 }
@@ -142,20 +137,23 @@ open class MavenGeneratedArtifactsPublishPluginService : BuildService<MavenGener
             description = "Generates SHA-256 and SHA-1 hash files for all artifacts."
             doLast {
                 val libsDir = file("${layout.buildDirectory.get()}/libs")
-                libsDir.listFiles()?.forEach { file ->
-                    if (file.isFile) {
-                        listOf("SHA-256", "SHA-1").forEach { algo ->
-                            val hash = file.generateHash(algo)
-                            val ext = when(algo) {
-                                "SHA-1" -> "sha1"
-                                "SHA-256" -> "sha256"
-                                else -> algo.lowercase()
+                libsDir.listFiles()
+                    ?.filter { it.isFile }
+                    ?.filter { it.extension in listOf("jar", "war", "aar", "pom") }
+                    ?.forEach { file ->
+                        if (file.isFile) {
+                            listOf("SHA-256", "SHA-1").forEach { algo ->
+                                val hash = file.generateHash(algo)
+                                val ext = when (algo) {
+                                    "SHA-1" -> "sha1"
+                                    "SHA-256" -> "sha256"
+                                    else -> algo.lowercase()
+                                }
+                                file.resolveSibling("${file.name}.$ext").writeText(hash)
+                                logger.lifecycle(" | [INFO] Created file: ${file.name}.$ext")
                             }
-                            file.resolveSibling("${file.name}.$ext").writeText(hash)
-                            logger.lifecycle(" | [INFO] Created file: ${file.name}.$ext")
                         }
                     }
-                }
             }
         }
     }

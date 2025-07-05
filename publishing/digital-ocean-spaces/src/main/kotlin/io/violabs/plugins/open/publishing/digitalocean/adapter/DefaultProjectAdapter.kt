@@ -12,6 +12,7 @@ class DefaultProjectAdapter(
     override val project: Project,
     override val buildDir: File = project.layout.buildDirectory.get().asFile,
     override val name: String = project.name,
+    override val group: String = project.group.toString(),
     override val version: String = project.version.toString(),
     override val logger: Logger = project.logger
 ) : ProjectAdapter {

@@ -13,6 +13,7 @@ open class ManualMavenArtifactsExtension @Inject constructor(private val objectF
     private var licenses: List<License>? = null
     private var developers: List<Developer>? = null
     private var scm: Scm? = null
+    private var isPlugin: Boolean = false
 
     fun licenses(block: Licenses.() -> Unit) {
         this.licenses = Licenses().apply(block).licenses()

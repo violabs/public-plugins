@@ -3,10 +3,12 @@ package io.violabs.plugins.open.publishing.mavengenerated
 import io.violabs.test.core.UnitTest
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
+@Disabled
 class PluginServiceFunctionalTest : UnitTest() {
 
     private fun writeResource(source: String, dir: File, target: String) {

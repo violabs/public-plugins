@@ -36,7 +36,7 @@ internal fun createRequiredFileStructure(
         val publicationDir = File(buildDir, "publications").apply {
             mkdirs()
         }
-        val testDir = File(publicationDir, "test").apply {
+        val testDir = File(publicationDir, "digitalOceanSpaces").apply {
             mkdirs()
         }
         File(testDir, "pom-default.xml").writeText(

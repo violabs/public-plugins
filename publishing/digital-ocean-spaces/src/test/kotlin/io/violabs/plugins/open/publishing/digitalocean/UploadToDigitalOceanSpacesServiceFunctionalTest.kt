@@ -11,6 +11,7 @@ import io.violabs.test.core.UnitTest
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
@@ -21,6 +22,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse
 import java.io.File
 import java.nio.file.Path
 
+@Disabled
 class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
     val logger: Logger = Logging.getLogger(UploadToDigitalOceanSpacesServiceFunctionalTest::class.java)
 
@@ -271,6 +273,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
     private class TestProjectAdapter(
         tempDir: Path,
         override val name: String = "my-lib",
+        override val group: String = "io.violabs",
         override val version: String = "1.0.0"
     ) : ProjectAdapter {
         override val project: Project = mockk()

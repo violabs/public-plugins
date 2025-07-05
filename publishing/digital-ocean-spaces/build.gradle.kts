@@ -51,6 +51,7 @@ gradlePlugin {
 }
 
 projectSync {
+    autoSync()
     val projectFile = rootProject.layout
         .projectDirectory
         .asFile

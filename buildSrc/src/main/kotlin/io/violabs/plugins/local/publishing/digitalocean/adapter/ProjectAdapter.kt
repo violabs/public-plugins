@@ -7,6 +7,7 @@ import java.io.File
 interface ProjectAdapter {
     val project: Project
     val buildDir: File
+    val group: String
     val name: String
     val version: String
     val logger: Logger

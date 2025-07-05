@@ -37,6 +37,7 @@ dependencies {
 }
 
 projectSync {
+    autoSync()
     val projectFile = rootProject.layout
         .projectDirectory
         .asFile
@@ -62,7 +63,7 @@ digitalOceanSpacesPublishing {
     secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
     artifactPath = "plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
     isPlugin = true
-    dryRun = true
+    dryRun = true // Set to false to enable actual uploads
 }
 
 mavenGeneratedArtifacts {

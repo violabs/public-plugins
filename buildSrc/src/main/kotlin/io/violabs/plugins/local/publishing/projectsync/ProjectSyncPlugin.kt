@@ -8,7 +8,7 @@ abstract class ProjectSyncPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = project.extensions.create("projectSync", ProjectSyncExtension::class.java)
 
-        project.tasks.register("syncProject", SyncProjectTask::class.java) {
+        val syncProject = project.tasks.register("syncProject", SyncProjectTask::class.java) {
             group = "sync"
             description = "Synchronizes project files from source to target directory."
             this.extension = extension
@@ -21,7 +21,11 @@ abstract class ProjectSyncPlugin : Plugin<Project> {
         }
 
         project.tasks.named("build") {
-            dependsOn(verifyProjectSync)
+            if (extension.isAutoSyncEnabled()) {
+                dependsOn(syncProject)
+            } else {
+                dependsOn(verifyProjectSync)
+            }
         }
     }
 }
