@@ -18,6 +18,8 @@ class DigitalOceanSpacesPublishPluginService {
         // Create the extension
         val extension = project.extensions.create<DigitalOceanSpacesExtension>("digitalOceanSpacesPublishing")
 
+        extension.publishedVersion = project.version.toString()
+
         project.afterEvaluate {
             project.logger.lifecycle("Applying DigitalOceanSpacesPublishPlugin to project: ${project.name}")
             project.logger.lifecycle(" | [INFO] endpoint: ${extension.endpoint}")
@@ -57,7 +59,6 @@ class DigitalOceanSpacesPublishPluginService {
 
                 // If using the maven-publish plugin, also depend on publish tasks
                 plugins.withId("maven-publish") {
-//                    dependsOn("publishToMavenLocal")
                     dependsOn("generatePomFileForDigitalOceanSpacesPublication")
                 }
             }

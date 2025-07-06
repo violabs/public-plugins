@@ -62,8 +62,9 @@ digitalOceanSpacesPublishing {
     accessKey = project.getPropertyOrEnv("spaces.key", "DO_SPACES_API_KEY")
     secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
     artifactPath = "plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
+    publishedVersion = version.toString()
     isPlugin = true
-    dryRun = true // Set to false to enable actual uploads
+    dryRun = true
 }
 
 mavenGeneratedArtifacts {

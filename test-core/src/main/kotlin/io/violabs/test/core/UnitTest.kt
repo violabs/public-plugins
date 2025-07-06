@@ -7,4 +7,12 @@ abstract class UnitTest {
         println("EXPECT: $expected\nACTUAL: $actual")
         return expected == actual
     }
+
+    protected infix fun <T> T.eq(expected: T) {
+        if (this == expected) return
+
+        assert(this == expected) {
+            "ACTUAL: $this\nEXPECT: $expected"
+        }
+    }
 }

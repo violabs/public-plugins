@@ -43,9 +43,9 @@ class DefaultDigitalOceanSpacesClient(
             client.use {
                 if (!file.exists()) return@use logger.warn("File ${file.name} does not exist, skipping upload")
 
-                val key = "$artifactPath/${file.name}"
+                val key = getKey(file, artifactPath)
 
-                logger.lifecycle("Uploading ${file.name} to ${bucket}/$key")
+                logger.lifecycle("  | Uploading ${file.name} to ${bucket}/$key")
 
                 val request = PutObjectRequest.builder()
                     .bucket(bucket)
@@ -56,7 +56,7 @@ class DefaultDigitalOceanSpacesClient(
                 it.putObject(request, file.toPath())
             }
         } catch (e: Exception) {
-            logger.error("Failed to upload file ${file.name} to Digital Ocean Spaces", e)
+            logger.error("[ERROR] Failed to upload file ${file.name} to Digital Ocean Spaces", e)
             client.close()
         }
     }

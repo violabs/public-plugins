@@ -11,7 +11,7 @@ class DryRunDigitalOceanSpacesClient(
     override fun uploadFile(file: File) {
         if (!file.exists()) return logger.warn("File ${file.name} does not exist, skipping upload")
 
-        val key = "${ext.artifactPath ?: ""}/${file.name}"
+        val key = getKey(file, ext.artifactPath ?: "")
         logger.lifecycle("  | Dry run: would upload ${file.name} to ${ext.bucket}/$key")
     }
 }

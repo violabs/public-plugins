@@ -14,7 +14,7 @@ repositories {
 }
 
 extra["publishingDigitalOceanSpacesVersion"] = "0.0.2"
-extra["publishingMavenGeneratedArtifactsVersion"] = "0.0.5"
+extra["publishingMavenGeneratedArtifactsVersion"] = "0.0.9"
 
 allprojects {
     apply {

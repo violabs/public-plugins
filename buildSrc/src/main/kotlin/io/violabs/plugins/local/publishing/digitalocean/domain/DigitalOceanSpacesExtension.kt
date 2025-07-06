@@ -34,7 +34,7 @@ open class DigitalOceanSpacesExtension {
      */
     var artifactPath: String? = null
 
-    var jarQualifier: String? = null
+    var publishedVersion: String? = null
 
     /**
      * Whether to perform the actual upload or just a dry run

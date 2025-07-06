@@ -29,15 +29,37 @@ class UploadToDigitalOceanSpacesService(
             version = project.version
         )
 
-        val filesToUpload: List<File> =
+        var filesToUpload: Sequence<File> =
             createJar()
                 .plus(createSourcesJar())
                 .plus(createJavadocJar())
                 .plus(createKdocJar())
                 .plus(pomFiles)
-                .toList()
 
-        filesToUpload.forEach(digitalOceanSpacesClient::uploadFile)
+        if (isPlugin) {
+            val mainJar = File(buildDir, "libs/${project.name}-${project.version}.jar")
+            println("${mainJar.exists()}")
+            val pluginPath = "libs/${project.name}-${project.version}.gradle.plugin.jar"
+            val pluginJar = File(buildDir, pluginPath)
+            pluginJar.parentFile.mkdirs()
+            mainJar.copyTo(pluginJar, overwrite = true)
+
+            val sha1 = File(buildDir, "$pluginPath.sha1").apply {
+                parentFile.mkdirs()
+                writeText(pluginJar.generateHash("SHA-1"))
+            }
+
+            val sha256 = File(buildDir, "$pluginPath.sha256").apply {
+                parentFile.mkdirs()
+                writeText(pluginJar.generateHash("SHA-256"))
+            }
+
+            filesToUpload = filesToUpload.plus(sequenceOf(pluginJar, sha1, sha256))
+        }
+
+        filesToUpload
+            .onEach { file -> println("  | found: ${file.name}") }
+            .forEach(digitalOceanSpacesClient::uploadFile)
     }
 
     private fun createJar(): Sequence<File> = buildDir.createLibFiles()
@@ -56,33 +78,28 @@ class UploadToDigitalOceanSpacesService(
             throw IllegalStateException("POM file does not exist: ${pomFile.absolutePath}")
         }
 
-        val fileName = "libs/${artifactId}-${version}.pom"
-
-        val newPom = File(buildDir, fileName)
+        // build a real Maven‐style path: groupId/artifactId/version
+        val repoPath = groupId.replace('.', '/') + "/" + artifactId + "/" + version
+        val pomName = "$artifactId-$version.pom"
+        val newPom = File(buildDir, "$repoPath/$pomName")
 
         newPom.parentFile.mkdirs()
-
         pomFile.copyTo(newPom, overwrite = true)
 
         project.project.addGenerateHashesTask()
 
-        val sha1 = File(buildDir, "$fileName.sha1").apply {
+        val sha1 = File(buildDir, "$repoPath/$pomName.sha1").apply {
             parentFile.mkdirs()
-            writeText(
-                newPom.generateHash("SHA-1")
-            )
+            writeText(newPom.generateHash("SHA-1"))
         }
 
-        val sha256 = File(buildDir, "$fileName.sha256").apply {
+        val sha256 = File(buildDir, "$repoPath/$pomName.sha256").apply {
             parentFile.mkdirs()
-            writeText(
-                newPom.generateHash("SHA-256")
-            )
+            writeText(newPom.generateHash("SHA-256"))
         }
 
-        val pluginPom = pluginPom(newPom, groupId, artifactId, version)
-
-        return sequenceOf(newPom, sha1, sha256) + pluginPom
+        val pluginFiles = pluginPom(newPom, groupId, artifactId, version)
+        return sequenceOf(newPom, sha1, sha256) + pluginFiles
     }
 
     private fun pluginPom(
@@ -91,41 +108,35 @@ class UploadToDigitalOceanSpacesService(
         artifactId: String,
         version: String
     ): Sequence<File> {
-        if (!isPlugin) {
-            return emptySequence()
-        }
+        if (!isPlugin) return emptySequence()
 
-        val fileName = "libs/$groupId.$artifactId.gradle.plugin-${version}.pom"
-
-        val targetPom = File(buildDir, fileName)
+        // marker‐pom under plugin‐id path: groupId.artifactId → groupId/artifactId
+        val pluginId = "$groupId.$artifactId"
+        val pluginPath = pluginId.replace('.', '/')
+        val pomName = "$pluginId.gradle.plugin-$version.pom"
+        val targetPom = File(buildDir, "$pluginPath/$version/$pomName")
 
         targetPom.parentFile.mkdirs()
-
         newPom.copyTo(targetPom, overwrite = true)
-
         project.project.addGenerateHashesTask()
 
-        val sha1 = File(buildDir, "$fileName.sha1").apply {
+        val sha1 = File(buildDir, "$pluginPath/$version/$pomName.sha1").apply {
             parentFile.mkdirs()
-            writeText(
-                targetPom.generateHash("SHA-1")
-            )
+            writeText(targetPom.generateHash("SHA-1"))
         }
 
-        val sha256 = File(buildDir, "$fileName.sha256").apply {
+        val sha256 = File(buildDir, "$pluginPath/$version/$pomName.sha256").apply {
             parentFile.mkdirs()
-            writeText(
-                targetPom.generateHash("SHA-256")
-            )
+            writeText(targetPom.generateHash("SHA-256"))
         }
 
         return sequenceOf(targetPom, sha1, sha256)
     }
 
     private fun File.createLibFile(preJar: String? = null, postJar: String = "", fileType: String = "jar"): File {
-        val preJarSetup = preJar?.let { "-$it" } ?: ""
-        val postJarSetup = if (postJar.isEmpty()) "" else ".$postJar"
-        return File(this, "libs/${project.name}-${project.version}$preJarSetup.$fileType$postJarSetup")
+        val pre = preJar?.let { "-$it" } ?: ""
+        val post = if (postJar.isEmpty()) "" else ".$postJar"
+        return File(this, "libs/${project.name}-${project.version}$pre.$fileType$post")
     }
 
     private fun File.createLibFiles(preJar: String? = null, fileType: String = "jar"): Sequence<File> {
@@ -136,49 +147,35 @@ class UploadToDigitalOceanSpacesService(
         )
     }
 
-
     fun Project.addGenerateHashesTask() {
         val libsDir = file("${layout.buildDirectory.get()}/libs")
+        val files = libsDir.listFiles()?.filter { it.isFile } ?: return
 
-        val files = libsDir.listFiles()?.filter { it.isFile }
+        // Skip any file that already *is* a hash
+        val candidates = files.filter { !it.name.endsWith(".sha1") && !it.name.endsWith(".sha256") }
 
-        val fileNames = files?.map { it.name } ?: emptyList()
-
-        val baseFiles = files?.filter { it.extension in listOf("jar", "war", "aar", "pom") } ?: emptyList()
-
-        val filesToHash = baseFiles.filter {
-            val hashed1 = "$it.sha1"
-            val hashed2 = "$it.sha256"
-            hashed1 !in fileNames && hashed2 !in fileNames
+        val existing = files.map { it.name }.toSet()
+        val toHash = candidates.filter { f ->
+            "${f.name}.sha1" !in existing && "${f.name}.sha256" !in existing
         }
 
-        filesToHash
-            .onEach { println("  | Generating hashes for file: ${it.name}") }
-            .forEach { file ->
-                if (file.isFile) {
-                    listOf("SHA-256", "SHA-1").forEach { algo ->
-                        val hash = file.generateHash(algo)
-                        val ext = when (algo) {
-                            "SHA-1" -> "sha1"
-                            "SHA-256" -> "sha256"
-                            else -> algo.lowercase()
-                        }
-                        file.resolveSibling("${file.name}.$ext").writeText(hash)
-                        logger.lifecycle("  | Created file: ${file.name}.$ext")
-                    }
+        toHash.onEach { println("  | Generating hashes for file: ${it.name}") }
+            .forEach { f ->
+                listOf("SHA-1" to "sha1", "SHA-256" to "sha256").forEach { (algo, ext) ->
+                    f.resolveSibling("${f.name}.$ext").writeText(f.generateHash(algo))
+                    logger.lifecycle("  | Created file: ${f.name}.${ext}")
                 }
             }
-
     }
 
     fun File.generateHash(hashAlgo: String): String {
-        val buffer = ByteArray(1024 * 4)
+        val buffer = ByteArray(4 * 1024)
         val md = MessageDigest.getInstance(hashAlgo)
         inputStream().use { fis ->
-            var bytes = fis.read(buffer)
-            while (bytes >= 0) {
-                if (bytes > 0) md.update(buffer, 0, bytes)
-                bytes = fis.read(buffer)
+            var read = fis.read(buffer)
+            while (read >= 0) {
+                if (read > 0) md.update(buffer, 0, read)
+                read = fis.read(buffer)
             }
         }
         return md.digest().joinToString("") { "%02x".format(it) }
