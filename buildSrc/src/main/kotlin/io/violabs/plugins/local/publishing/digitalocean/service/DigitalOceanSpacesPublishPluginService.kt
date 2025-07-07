@@ -20,7 +20,7 @@ class DigitalOceanSpacesPublishPluginService {
 
         extension.publishedVersion = project.version.toString()
 
-        project.afterEvaluate {
+        afterEvaluate {
             project.logger.lifecycle("Applying DigitalOceanSpacesPublishPlugin to project: ${project.name}")
             project.logger.lifecycle(" | [INFO] endpoint: ${extension.endpoint}")
             project.logger.lifecycle(" | [INFO] bucket: ${extension.bucket}")
@@ -55,7 +55,11 @@ class DigitalOceanSpacesPublishPluginService {
                 }
                 checkS3Client = doSpacesClient.s3Client()
 
-                dependsOn("build", "assembleMavenArtifacts")
+                dependsOn("build")
+
+                tasks.findByName("assembleMavenArtifacts")?.also {
+                    dependsOn(it)
+                }
 
                 // If using the maven-publish plugin, also depend on publish tasks
                 plugins.withId("maven-publish") {

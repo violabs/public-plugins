@@ -1,10 +1,12 @@
+import io.violabs.plugins.local.publishing.digitalocean.domain.uploadToDigitalOceanSpaces
+import io.violabs.plugins.local.publishing.mavengenerated.domain.mavenGeneratedArtifacts
 import io.violabs.plugins.local.secrets.getPropertyOrEnv
 
 val publishingDigitalOceanSpacesVersion: String by rootProject.extra
 
 plugins {
     `kotlin-dsl`
-    id("org.jetbrains.dokka") version "1.9.20"
+    id("org.jetbrains.dokka")
     id("io.violabs.plugins.local.publishing.project-sync")
     id("io.violabs.plugins.local.publishing.maven-generated-artifacts")
     id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
@@ -43,7 +45,7 @@ gradlePlugin {
     plugins {
         create("digitalOceanSpacesPlugin") {
             id = "io.violabs.plugins.open.publishing.digital-ocean-spaces"
-            version = publishingDigitalOceanSpacesVersion
+            version = version.toString()
             implementationClass = "io.violabs.plugins.open.publishing.digitalocean.DigitalOceanSpacesPublishPlugin"
         }
     }
@@ -66,6 +68,10 @@ digitalOceanSpacesPublishing {
     secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
     publishedVersion = version.toString()
     isPlugin = true
+}
+
+tasks.uploadToDigitalOceanSpaces?.apply {
+    dependsOn(tasks.mavenGeneratedArtifacts)
 }
 
 mavenGeneratedArtifacts {

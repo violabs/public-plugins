@@ -1,3 +1,5 @@
+import io.violabs.plugins.local.publishing.digitalocean.domain.uploadToDigitalOceanSpaces
+import io.violabs.plugins.local.publishing.mavengenerated.domain.mavenGeneratedArtifacts
 import io.violabs.plugins.local.secrets.getPropertyOrEnv
 
 val publishingMavenGeneratedArtifactsVersion: String by rootProject.extra
@@ -64,6 +66,10 @@ digitalOceanSpacesPublishing {
     publishedVersion = version.toString()
     isPlugin = true
     dryRun = false
+}
+
+tasks.uploadToDigitalOceanSpaces?.apply {
+    dependsOn(tasks.mavenGeneratedArtifacts)
 }
 
 mavenGeneratedArtifacts {

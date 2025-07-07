@@ -13,8 +13,8 @@ repositories {
     mavenCentral()
 }
 
-extra["publishingDigitalOceanSpacesVersion"] = "0.0.2"
-extra["publishingMavenGeneratedArtifactsVersion"] = "0.0.11"
+extra["publishingDigitalOceanSpacesVersion"] = "0.0.8"
+extra["publishingMavenGeneratedArtifactsVersion"] = "0.0.13"
 
 allprojects {
     apply {

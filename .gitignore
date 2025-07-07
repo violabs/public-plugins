@@ -1,7 +1,8 @@
 .idea
 .gradle
 .DS_Store
-build/**
+.kotlin
+build
 
 secret.properties
 personal*
