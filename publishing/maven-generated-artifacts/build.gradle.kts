@@ -1,13 +1,17 @@
 import io.violabs.plugins.local.secrets.getPropertyOrEnv
 
+val publishingMavenGeneratedArtifactsVersion: String by rootProject.extra
+
 plugins {
     `kotlin-dsl`
-    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
     id("org.jetbrains.dokka")
+    id("io.violabs.plugins.local.publishing.project-sync")
+    id("io.violabs.plugins.local.publishing.maven-generated-artifacts")
+    id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
 }
 
 group = "io.violabs.plugins.open.publishing"
-version = "0.0.2"
+version = publishingMavenGeneratedArtifactsVersion
 
 buildscript {
     repositories {
@@ -27,12 +31,28 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    testImplementation(gradleTestKit())
+    testImplementation(project(":test-core"))
+}
+
+projectSync {
+    autoSync()
+    val projectFile = rootProject.layout
+        .projectDirectory
+        .asFile
+    syncSource = projectFile
+        .resolve("publishing/maven-generated-artifacts/src/main/kotlin/io/violabs/plugins/open/publishing/mavengenerated")
+    syncTarget = projectFile
+        .resolve("buildSrc/src/main/kotlin/io/violabs/plugins/local/publishing/mavengenerated")
+}
+
 gradlePlugin {
     plugins {
-        create("mavenGeneratedArtifacts") {
+        create("mavenGeneratedArtifactsPlugin") {
             id = "io.violabs.plugins.open.publishing.maven-generated-artifacts"
-            version = project.version.toString()
-            implementationClass = "io.violabs.plugins.open.publishing.ManualMavenArtifactsPlugin"
+            version = version.toString()
+            implementationClass = "io.violabs.plugins.open.publishing.mavengenerated.MavenGeneratedArtifactsPlugin"
         }
     }
 }
@@ -41,11 +61,13 @@ digitalOceanSpacesPublishing {
     bucket = "open-reliquary"
     accessKey = project.getPropertyOrEnv("spaces.key", "DO_SPACES_API_KEY")
     secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
-    artifactPath = "plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
+    publishedVersion = version.toString()
     isPlugin = true
+    dryRun = false
 }
 
 mavenGeneratedArtifacts {
+    publicationName = "digitalOceanSpaces"
     name = "Maven Generated Artifacts"
     description = """
             This plugin generates Maven artifacts such as sources, Javadoc, and KDoc JARs.

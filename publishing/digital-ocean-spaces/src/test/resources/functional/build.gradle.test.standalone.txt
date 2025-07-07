@@ -1,0 +1,9 @@
+plugins {
+    id("io.violabs.plugins.open.publishing.digital-ocean-spaces")
+    id("org.jetbrains.dokka") version "1.9.20"
+}
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}

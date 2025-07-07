@@ -19,6 +19,7 @@ repositories {
 
 dependencies {
     implementation("software.amazon.awssdk:s3:2.25.27")
+    implementation("org.apache.commons:commons-lang3:3.17.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -40,6 +41,22 @@ gradlePlugin {
     }
 
     plugins {
+        create("localProjectSyncPlugin") {
+            id = "io.violabs.plugins.local.publishing.project-sync"
+            version = "0.0.1"
+            implementationClass = "io.violabs.plugins.local.publishing.projectsync.ProjectSyncPlugin"
+        }
+    }
+
+    plugins {
+        create("localMavenGeneratedArtifactsPlugin") {
+            id = "io.violabs.plugins.local.publishing.maven-generated-artifacts"
+            version = "0.0.1"
+            implementationClass = "io.violabs.plugins.local.publishing.mavengenerated.MavenGeneratedArtifactsPlugin"
+        }
+    }
+
+    plugins {
         create("localDigitalOceanSpacesPlugin") {
             id = "io.violabs.plugins.local.publishing.digital-ocean-spaces"
             version = "0.0.1"
@@ -48,10 +65,10 @@ gradlePlugin {
     }
 
     plugins {
-        create("localMavenGeneratedArtifacts") {
-            id = "io.violabs.plugins.local.publishing.maven-generated-artifacts"
+        create("jarExplorerPlugin") {
+            id = "io.violabs.plugins.local.jar-explorer"
             version = "0.0.1"
-            implementationClass = "io.violabs.plugins.local.publishing.ManualMavenArtifactsPlugin"
+            implementationClass = "io.violabs.plugins.local.jar.explorer.JarExplorerPlugin"
         }
     }
 }

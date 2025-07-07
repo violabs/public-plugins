@@ -7,15 +7,21 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        mavenLocal()
+    }
+
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.namespace == "io.violabs.plugins.local.publishing.maven-generated-artifacts") {
+                useModule("io.violabs.plugins.local.publishing:maven-generated-artifacts:${requested.version}")
+            }
+        }
     }
 }
 
 include(
     "example",
     "publishing:digital-ocean-spaces",
-    "publishing:digital-ocean-spaces-core",
     "publishing:maven-generated-artifacts",
-    "publishing:maven-generated-artifacts-core",
-    "local:publishing:digital-ocean-spaces",
-    "local:publishing:maven-generated-artifacts",
+    "test-core"
 )
