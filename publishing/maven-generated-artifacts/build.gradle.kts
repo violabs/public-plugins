@@ -1,3 +1,5 @@
+import io.violabs.plugins.local.publishing.digitalocean.domain.uploadToDigitalOceanSpaces
+import io.violabs.plugins.local.publishing.mavengenerated.domain.mavenGeneratedArtifacts
 import io.violabs.plugins.local.secrets.getPropertyOrEnv
 
 val publishingMavenGeneratedArtifactsVersion: String by rootProject.extra
@@ -36,6 +38,16 @@ dependencies {
     testImplementation(project(":test-core"))
 }
 
+gradlePlugin {
+    plugins {
+        create("mavenGeneratedArtifactsPlugin") {
+            id = "io.violabs.plugins.open.publishing.maven-generated-artifacts"
+            version = version.toString()
+            implementationClass = "io.violabs.plugins.open.publishing.mavengenerated.MavenGeneratedArtifactsPlugin"
+        }
+    }
+}
+
 projectSync {
     autoSync()
     val projectFile = rootProject.layout
@@ -47,16 +59,6 @@ projectSync {
         .resolve("buildSrc/src/main/kotlin/io/violabs/plugins/local/publishing/mavengenerated")
 }
 
-gradlePlugin {
-    plugins {
-        create("mavenGeneratedArtifactsPlugin") {
-            id = "io.violabs.plugins.open.publishing.maven-generated-artifacts"
-            version = version.toString()
-            implementationClass = "io.violabs.plugins.open.publishing.mavengenerated.MavenGeneratedArtifactsPlugin"
-        }
-    }
-}
-
 digitalOceanSpacesPublishing {
     bucket = "open-reliquary"
     accessKey = project.getPropertyOrEnv("spaces.key", "DO_SPACES_API_KEY")
@@ -64,6 +66,10 @@ digitalOceanSpacesPublishing {
     publishedVersion = version.toString()
     isPlugin = true
     dryRun = false
+}
+
+tasks.uploadToDigitalOceanSpaces?.apply {
+    dependsOn(tasks.mavenGeneratedArtifacts)
 }
 
 mavenGeneratedArtifacts {
