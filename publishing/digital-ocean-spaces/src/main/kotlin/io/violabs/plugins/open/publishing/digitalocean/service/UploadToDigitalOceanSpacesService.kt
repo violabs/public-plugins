@@ -2,6 +2,8 @@ package io.violabs.plugins.open.publishing.digitalocean.service
 
 import io.violabs.plugins.open.publishing.digitalocean.adapter.ProjectAdapter
 import io.violabs.plugins.open.publishing.digitalocean.client.DigitalOceanSpacesClient
+import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanFile
+import io.violabs.plugins.open.publishing.digitalocean.domain.Namespace
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import software.amazon.awssdk.services.s3.S3Client
@@ -22,130 +24,168 @@ class UploadToDigitalOceanSpacesService(
     fun uploadToSpaces() {
         checkVersionService.checkVersion(project, digitalOceanSpacesClient.ext, checkS3Client)
 
-        val pomFiles = copyPomFiles(
-            publicationName = "digitalOceanSpaces",
+        val namespace = Namespace(
             groupId = project.group,
             artifactId = project.name,
             version = project.version
         )
 
-        var filesToUpload: Sequence<File> =
-            createJar()
-                .plus(createSourcesJar())
-                .plus(createJavadocJar())
-                .plus(createKdocJar())
+        val pomFiles = copyPomFiles(namespace)
+
+        var filesToUpload: Sequence<DigitalOceanFile> =
+            createJar(namespace)
+                .plus(createSourcesJar(namespace))
+                .plus(createJavadocJar(namespace))
+                .plus(createKdocJar(namespace))
                 .plus(pomFiles)
 
         if (isPlugin) {
-            val mainJar = File(buildDir, "libs/${project.name}-${project.version}.jar")
-            println("${mainJar.exists()}")
-            val pluginPath = "libs/${project.name}-${project.version}.gradle.plugin.jar"
-            val pluginJar = File(buildDir, pluginPath)
+            val mainJar = File(buildDir, namespace.jarPath)
+            val pluginJar = File(buildDir, namespace.pluginJarPath)
             pluginJar.parentFile.mkdirs()
             mainJar.copyTo(pluginJar, overwrite = true)
 
-            val sha1 = File(buildDir, "$pluginPath.sha1").apply {
-                parentFile.mkdirs()
-                writeText(pluginJar.generateHash("SHA-1"))
-            }
+            val pluginJarDoFile = DigitalOceanFile(
+                namespace.pluginJarKey,
+                pluginJar
+            )
 
-            val sha256 = File(buildDir, "$pluginPath.sha256").apply {
-                parentFile.mkdirs()
-                writeText(pluginJar.generateHash("SHA-256"))
-            }
+            val sha1 = DigitalOceanFile(
+                namespace.pluginJarSha1Key,
+                File(buildDir, namespace.pluginJarSha1Path).apply {
+                    parentFile.mkdirs()
+                    writeText(pluginJar.generateHash("SHA-1"))
+                }
+            )
 
-            filesToUpload = filesToUpload.plus(sequenceOf(pluginJar, sha1, sha256))
+            val sha256 = DigitalOceanFile(
+                namespace.pluginJarSha256Key,
+                File(buildDir, namespace.pluginJarSha256Path).apply {
+                    parentFile.mkdirs()
+                    writeText(pluginJar.generateHash("SHA-256"))
+                }
+            )
+
+            filesToUpload = filesToUpload.plus(sequenceOf(pluginJarDoFile, sha1, sha256))
         }
 
         filesToUpload
-            .onEach { file -> println("  | found: ${file.name}") }
             .forEach(digitalOceanSpacesClient::uploadFile)
     }
 
-    private fun createJar(): Sequence<File> = buildDir.createLibFiles()
-    private fun createSourcesJar(): Sequence<File> = buildDir.createLibFiles("sources")
-    private fun createKdocJar(): Sequence<File> = buildDir.createLibFiles("kdoc")
-    private fun createJavadocJar(): Sequence<File> = buildDir.createLibFiles("javadoc")
+    private fun createJar(namespace: Namespace): Sequence<DigitalOceanFile> = sequenceOf(
+        DigitalOceanFile(namespace.jarKey, File(buildDir, namespace.jarPath)),
+        DigitalOceanFile(namespace.jarSha1Key, File(buildDir, namespace.jarSha1Path)),
+        DigitalOceanFile(namespace.jarSha256Key, File(buildDir, namespace.jarSha256Path))
+    )
 
-    private fun copyPomFiles(
-        publicationName: String,
-        groupId: String,
-        artifactId: String,
-        version: String
-    ): Sequence<File> {
-        val pomFile = File(buildDir, "publications/$publicationName/pom-default.xml")
+    private fun createSourcesJar(namespace: Namespace): Sequence<DigitalOceanFile> = sequenceOf(
+        DigitalOceanFile(namespace.sourcesJarKey, File(buildDir, namespace.sourcesJarPath)),
+        DigitalOceanFile(namespace.sourcesJarSha1Key, File(buildDir, namespace.sourcesJarSha1Path)),
+        DigitalOceanFile(namespace.sourcesJarSha256Key, File(buildDir, namespace.sourcesJarSha256Path))
+    )
+
+    private fun createKdocJar(namespace: Namespace): Sequence<DigitalOceanFile> = sequenceOf(
+        DigitalOceanFile(namespace.kdocJarKey, File(buildDir, namespace.kdocJarPath)),
+        DigitalOceanFile(namespace.kdocJarSha1Key, File(buildDir, namespace.kdocJarSha1Path)),
+        DigitalOceanFile(namespace.kdocJarSha256Key, File(buildDir, namespace.kdocJarSha256Path))
+    )
+
+    private fun createJavadocJar(namespace: Namespace): Sequence<DigitalOceanFile> = sequenceOf(
+        DigitalOceanFile(namespace.javadocJarKey, File(buildDir, namespace.javadocJarPath)),
+        DigitalOceanFile(namespace.javadocJarSha1Key, File(buildDir, namespace.javadocJarSha1Path)),
+        DigitalOceanFile(namespace.javadocJarSha256Key, File(buildDir, namespace.javadocJarSha256Path))
+    )
+
+    private fun copyPomFiles(namespace: Namespace): Sequence<DigitalOceanFile> {
+        val pomFile = File(buildDir, namespace.sourcePomName)
         if (!pomFile.exists()) {
             throw IllegalStateException("POM file does not exist: ${pomFile.absolutePath}")
         }
 
-        // build a real Maven‐style path: groupId/artifactId/version
-        val repoPath = groupId.replace('.', '/') + "/" + artifactId + "/" + version
-        val pomName = "$artifactId-$version.pom"
-        val newPom = File(buildDir, "$repoPath/$pomName")
+        val newPom = File(buildDir, namespace.pomPath)
 
         newPom.parentFile.mkdirs()
         pomFile.copyTo(newPom, overwrite = true)
 
+        val finalPom = DigitalOceanFile(
+            namespace.pomKey,
+            newPom
+        )
+
 //        project.project.addGenerateHashesTask()
 
-        val sha1 = File(buildDir, "$repoPath/$pomName.sha1").apply {
-            parentFile.mkdirs()
-            writeText(newPom.generateHash("SHA-1"))
-        }
+        val sha1 = DigitalOceanFile(
+            namespace.pomSha1Key,
+            File(buildDir, namespace.pomSha1Path).apply {
+                parentFile.mkdirs()
+                writeText(newPom.generateHash("SHA-1"))
+            }
+        )
 
-        val sha256 = File(buildDir, "$repoPath/$pomName.sha256").apply {
-            parentFile.mkdirs()
-            writeText(newPom.generateHash("SHA-256"))
-        }
+        val sha256 = DigitalOceanFile(
+            namespace.pomSha256Key,
+            File(buildDir, namespace.pomSha256Path).apply {
+                parentFile.mkdirs()
+                writeText(newPom.generateHash("SHA-256"))
+            })
 
-        val pluginFiles = pluginPom(newPom, groupId, artifactId, version)
-        return sequenceOf(newPom, sha1, sha256) + pluginFiles
+        val pluginFiles = pluginPom(namespace)
+        return sequenceOf(finalPom, sha1, sha256) + pluginFiles
     }
 
-    private fun pluginPom(
-        newPom: File,
-        groupId: String,
-        artifactId: String,
-        version: String
-    ): Sequence<File> {
+    private fun pluginPom(namespace: Namespace): Sequence<DigitalOceanFile> {
         if (!isPlugin) return emptySequence()
 
-        // marker‐pom under plugin‐id path: groupId.artifactId → groupId/artifactId
-        val pluginId = "$groupId.$artifactId"
-        val pluginPath = pluginId.replace('.', '/')
-        val pomName = "$pluginId.gradle.plugin-$version.pom"
-        val targetPom = File(buildDir, "$pluginPath/$version/$pomName")
-
+        val targetPom = File(buildDir, namespace.pluginPomPath)
         targetPom.parentFile.mkdirs()
-        newPom.copyTo(targetPom, overwrite = true)
+
+        val pluginMarkerPomContent = """
+            <project xmlns="http://maven.apache.org/POM/4.0.0"
+                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+              <modelVersion>4.0.0</modelVersion>
+              <groupId>${namespace.pluginMarkerGroup}</groupId>
+              <artifactId>${namespace.pluginMarkerArtifact}</artifactId>
+              <version>${namespace.version}</version>
+              <packaging>pom</packaging>
+              <name>Gradle Plugin Marker for ${namespace.pluginMarkerGroup}</name>
+              <description>Marker for Gradle plugin '${namespace.pluginMarkerGroup}'</description>
+              <dependencies>
+                <dependency>
+                  <groupId>${namespace.groupId}</groupId>
+                  <artifactId>${namespace.artifactId}</artifactId>
+                  <version>${namespace.version}</version>
+                  <scope>runtime</scope>
+                </dependency>
+              </dependencies>
+            </project>
+        """.trimIndent()
+
+        // --- Write marker POM to targetPom ---
+        targetPom.writeText(pluginMarkerPomContent)
+
         project.project.addGenerateHashesTask()
 
-        val sha1 = File(buildDir, "$pluginPath/$version/$pomName.sha1").apply {
-            parentFile.mkdirs()
-            writeText(targetPom.generateHash("SHA-1"))
-        }
-
-        val sha256 = File(buildDir, "$pluginPath/$version/$pomName.sha256").apply {
-            parentFile.mkdirs()
-            writeText(targetPom.generateHash("SHA-256"))
-        }
-
-        return sequenceOf(targetPom, sha1, sha256)
-    }
-
-    private fun File.createLibFile(preJar: String? = null, postJar: String = "", fileType: String = "jar"): File {
-        val pre = preJar?.let { "-$it" } ?: ""
-        val post = if (postJar.isEmpty()) "" else ".$postJar"
-        return File(this, "libs/${project.name}-${project.version}$pre.$fileType$post")
-    }
-
-    private fun File.createLibFiles(preJar: String? = null, fileType: String = "jar"): Sequence<File> {
-        return sequenceOf(
-            createLibFile(preJar, fileType = fileType),
-            createLibFile(preJar, "sha1", fileType),
-            createLibFile(preJar, "sha256", fileType)
+        val finalPom = DigitalOceanFile(namespace.pluginPomKey, targetPom)
+        val sha1 = DigitalOceanFile(
+            namespace.pluginPomSha1Key,
+            File(buildDir, namespace.pluginPomSha1Path).apply {
+                parentFile.mkdirs()
+                writeText(targetPom.generateHash("SHA-1"))
+            }
         )
+        val sha256 = DigitalOceanFile(
+            namespace.pluginPomSha256Key,
+            File(buildDir, namespace.pluginPomSha256Path).apply {
+                parentFile.mkdirs()
+                writeText(targetPom.generateHash("SHA-256"))
+            }
+        )
+
+        return sequenceOf(finalPom, sha1, sha256)
     }
+
 
     fun Project.addGenerateHashesTask() {
         val libsDir = file("${layout.buildDirectory.get()}/libs")

@@ -14,11 +14,6 @@ class NamespaceTest : UnitTest() {
         )
     ) {
 
-        //Resource missing. [HTTP GET: https://open-reliquary.nyc3.cdn.digitaloceanspaces.com
-        // /plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/
-        // io.violabs.plugins.open.publishing.maven-generated-artifacts.gradle.plugin/0.0.8/
-        // io.violabs.plugins.open.publishing.maven-generated-artifacts.gradle.plugin-0.0.8.pom]
-        //then
         baseTests {
             artifactVersion eq "digital-ocean-spaces-1.0.0"
             groupPath eq "io/violabs/plugins/open/publishing"
@@ -104,25 +99,47 @@ class NamespaceTest : UnitTest() {
                 "io/violabs/plugins/open/publishing/digital-ocean-spaces/1.0.0/digital-ocean-spaces-1.0.0.pom.sha256"
         }
 
-        pluginTests {
-            pluginPomName eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom"
-            pluginPomSha1Name eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom.sha1"
-            pluginPomSha256Name eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom.sha256"
-            pluginPomPath eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom"
-            pluginPomSha1Path eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom.sha1"
-            pluginPomSha256Path eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom.sha256"
+        pluginPomTests {
+            pluginJarName eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar"
+            pluginJarSha1Name eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar.sha1"
+            pluginJarSha256Name eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar.sha256"
+            pluginJarPath eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar"
+            pluginJarSha1Path eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar.sha1"
+            pluginJarSha256Path eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar.sha256"
+            pluginJarKey eq
+                "io/violabs/plugins/open/publishing/digital-ocean-spaces/" +
+                "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin/" +
+                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar"
+            pluginJarSha1Key eq
+                "io/violabs/plugins/open/publishing/digital-ocean-spaces/" +
+                "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin/" +
+                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar.sha1"
+            pluginJarSha256Key eq
+                "io/violabs/plugins/open/publishing/digital-ocean-spaces/" +
+                "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin/" +
+                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.jar.sha256"
+        }
+
+
+        pluginPomTests {
+            pluginPomName eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom"
+            pluginPomSha1Name eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom.sha1"
+            pluginPomSha256Name eq "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom.sha256"
+            pluginPomPath eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom"
+            pluginPomSha1Path eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom.sha1"
+            pluginPomSha256Path eq "libs/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom.sha256"
             pluginPomKey eq
                 "io/violabs/plugins/open/publishing/digital-ocean-spaces/" +
                 "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin/" +
-                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom"
+                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom"
             pluginPomSha1Key eq
                 "io/violabs/plugins/open/publishing/digital-ocean-spaces/" +
                 "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin/" +
-                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom.sha1"
+                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom.sha1"
             pluginPomSha256Key eq
                 "io/violabs/plugins/open/publishing/digital-ocean-spaces/" +
                 "io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin/" +
-                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin.1.0.0.pom.sha256"
+                "1.0.0/io.violabs.plugins.open.publishing.digital-ocean-spaces.gradle.plugin-1.0.0.pom.sha256"
         }
     }
 }
@@ -163,7 +180,13 @@ fun pomTests(runnable: () -> Unit) {
     runnable()
 }
 
-fun pluginTests(runnable: () -> Unit) {
+fun pluginJarTests(runnable: () -> Unit) {
+    // This function can be used to run tests related to plugin JAR files
+    // For example, you can check if the plugin JAR file is created correctly or if it contains the expected plugin classes
+    runnable()
+}
+
+fun pluginPomTests(runnable: () -> Unit) {
     // This function can be used to run tests related to Gradle plugin files
     // For example, you can check if the plugin file is created correctly or if it contains the expected plugin metadata
     runnable()

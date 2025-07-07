@@ -51,7 +51,7 @@ gradlePlugin {
     plugins {
         create("mavenGeneratedArtifactsPlugin") {
             id = "io.violabs.plugins.open.publishing.maven-generated-artifacts"
-            version = project.version.toString()
+            version = version.toString()
             implementationClass = "io.violabs.plugins.open.publishing.mavengenerated.MavenGeneratedArtifactsPlugin"
         }
     }
@@ -61,10 +61,9 @@ digitalOceanSpacesPublishing {
     bucket = "open-reliquary"
     accessKey = project.getPropertyOrEnv("spaces.key", "DO_SPACES_API_KEY")
     secretKey = project.getPropertyOrEnv("spaces.secret", "DO_SPACES_SECRET")
-    artifactPath = "plugins/io/violabs/plugins/open/publishing/maven-generated-artifacts/$version"
     publishedVersion = version.toString()
     isPlugin = true
-    dryRun = true
+    dryRun = false
 }
 
 mavenGeneratedArtifacts {

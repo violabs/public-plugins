@@ -68,7 +68,20 @@ data class Namespace(
     val pomSha1Key: String = "$artifactFullPath/$pomSha1Name"
     val pomSha256Key: String = "$artifactFullPath/$pomSha256Name"
 
-    val pluginPomName: String = "$groupId.$artifactId.gradle.plugin.$version.pom"
+    val pluginMarkerGroup: String = "$groupId.$artifactId"
+    val pluginMarkerArtifact: String = "$pluginMarkerGroup.gradle.plugin"
+
+    val pluginJarName: String = "$pluginMarkerArtifact-$version.jar"
+    val pluginJarSha1Name: String = "$pluginJarName.sha1"
+    val pluginJarSha256Name: String = "$pluginJarName.sha256"
+    val pluginJarPath: String = "libs/$pluginJarName"
+    val pluginJarSha1Path: String = "libs/$pluginJarSha1Name"
+    val pluginJarSha256Path: String = "libs/$pluginJarSha256Name"
+    val pluginJarKey: String = "$pluginFullPath/$pluginJarName"
+    val pluginJarSha1Key: String = "$pluginFullPath/$pluginJarSha1Name"
+    val pluginJarSha256Key: String = "$pluginFullPath/$pluginJarSha256Name"
+
+    val pluginPomName: String = "$pluginMarkerArtifact-$version.pom"
     val pluginPomSha1Name: String = "$pluginPomName.sha1"
     val pluginPomSha256Name: String = "$pluginPomName.sha256"
     val pluginPomPath: String = "libs/$pluginPomName"

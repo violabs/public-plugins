@@ -115,8 +115,8 @@ open class MavenGeneratedArtifactsPublishPluginService :
                         }
                         scm {
                             val scm = extension.scm()
-                            val connectionLocation = scm?.connection
-                            val developerConnectionLocation = scm?.developerConnection ?: connection
+                            val connectionLocation = scm?.connection?.getOrNull() ?: extension.websiteUrl
+                            val developerConnectionLocation = scm?.developerConnection ?: connectionLocation
                             connection.set("scm:git:git://$connectionLocation")
                             developerConnection.set("scm:git:ssh://$developerConnectionLocation")
                             url.set(scm?.url ?: extension.websiteUrl)
