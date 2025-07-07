@@ -1,6 +1,6 @@
 import io.violabs.plugins.local.publishing.digitalocean.domain.uploadToDigitalOceanSpaces
 import io.violabs.plugins.local.publishing.mavengenerated.domain.mavenGeneratedArtifacts
-import io.violabs.plugins.local.secrets.getPropertyOrEnv
+import io.violabs.plugins.local.secrets.gradleloader.domain.getPropertyOrEnv
 
 val publishingDigitalOceanSpacesVersion: String by rootProject.extra
 

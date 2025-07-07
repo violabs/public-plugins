@@ -1,14 +1,13 @@
 package io.violabs.plugins.local.publishing.digitalocean.task
 
 import io.violabs.plugins.local.publishing.digitalocean.adapter.DefaultProjectAdapter
-import io.violabs.plugins.local.publishing.digitalocean.client.DigitalOceanSpacesClient
+import io.violabs.plugins.local.publishing.digitalocean.domain.DigitalOceanSpacesExtension
 import io.violabs.plugins.local.publishing.digitalocean.service.CheckVersionDigitalOceanSpacesService
 import io.violabs.plugins.local.publishing.digitalocean.service.UploadToDigitalOceanSpacesService
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
-import software.amazon.awssdk.services.s3.S3Client
 
 /**
  * Task to upload project artifacts to Digital Ocean Spaces.
@@ -18,10 +17,7 @@ import software.amazon.awssdk.services.s3.S3Client
  */
 abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
     @get:Input
-    abstract var checkS3Client: S3Client
-
-    @get:Input
-    abstract var digitalOceanSpacesClient: DigitalOceanSpacesClient
+    abstract var extension: DigitalOceanSpacesExtension
 
     @get:Internal  // Not part of task inputs since it's behavior, not data
     var uploadService: UploadToDigitalOceanSpacesService? = null
@@ -50,9 +46,7 @@ abstract class DigitalOceanSpacesUploadTask : DefaultTask() {
 
         val service = uploadService ?: UploadToDigitalOceanSpacesService(
             DefaultProjectAdapter(project),
-            digitalOceanSpacesClient,
-            checkS3Client,
-            isPlugin = digitalOceanSpacesClient.ext.isPlugin,
+            extension,
             checkVersion
         )
 

@@ -1,7 +1,5 @@
 package io.violabs.plugins.open.publishing.digitalocean.service
 
-import io.violabs.plugins.open.publishing.digitalocean.client.DefaultDigitalOceanSpacesClient
-import io.violabs.plugins.open.publishing.digitalocean.client.DryRunDigitalOceanSpacesClient
 import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpacesExtension
 import io.violabs.plugins.open.publishing.digitalocean.task.DigitalOceanSpacesCheckVersionTask
 import io.violabs.plugins.open.publishing.digitalocean.task.DigitalOceanSpacesUploadTask
@@ -29,13 +27,11 @@ class DigitalOceanSpacesPublishPluginService {
             project.logger.lifecycle(" | [INFO] dryRun: ${extension.dryRun}")
             logger.lifecycle(" | [INFO] Registering `checkDigitalOceanSpacesVersion` task")
 
-            val doSpacesClient = DefaultDigitalOceanSpacesClient(extension, project.logger)
             // Register the version check task
             tasks.register<DigitalOceanSpacesCheckVersionTask>("checkDigitalOceanSpacesVersion") {
                 group = "verification"
                 description = "Checks if the current version already exists in Digital Ocean Spaces"
                 this.extension.set(extension)
-                this.s3Client = doSpacesClient.s3Client()
                 continueOnFailure.set(extension.continueOnVersionCheckFailure)
             }
 
@@ -48,12 +44,7 @@ class DigitalOceanSpacesPublishPluginService {
             tasks.register<DigitalOceanSpacesUploadTask>("uploadToDigitalOceanSpaces") {
                 group = "publishing"
                 description = "Uploads artifacts to Digital Ocean Spaces"
-                this.digitalOceanSpacesClient = if (extension.dryRun) {
-                    DryRunDigitalOceanSpacesClient(extension, project.logger)
-                } else {
-                    doSpacesClient
-                }
-                checkS3Client = doSpacesClient.s3Client()
+                this.extension = extension
 
                 dependsOn("build")
 

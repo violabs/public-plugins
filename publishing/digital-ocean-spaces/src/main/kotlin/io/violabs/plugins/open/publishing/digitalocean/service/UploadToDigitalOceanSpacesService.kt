@@ -1,20 +1,19 @@
 package io.violabs.plugins.open.publishing.digitalocean.service
 
 import io.violabs.plugins.open.publishing.digitalocean.adapter.ProjectAdapter
-import io.violabs.plugins.open.publishing.digitalocean.client.DigitalOceanSpacesClient
+import io.violabs.plugins.open.publishing.digitalocean.client.DefaultDigitalOceanSpacesClient
+import io.violabs.plugins.open.publishing.digitalocean.client.DryRunDigitalOceanSpacesClient
 import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanFile
+import io.violabs.plugins.open.publishing.digitalocean.domain.DigitalOceanSpacesExtension
 import io.violabs.plugins.open.publishing.digitalocean.domain.Namespace
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import software.amazon.awssdk.services.s3.S3Client
 import java.io.File
 import java.security.MessageDigest
 
 class UploadToDigitalOceanSpacesService(
     private val project: ProjectAdapter,
-    private val digitalOceanSpacesClient: DigitalOceanSpacesClient,
-    private val checkS3Client: S3Client,
-    private val isPlugin: Boolean = false,
+    private val extension: DigitalOceanSpacesExtension,
     private val checkVersionService: CheckVersionDigitalOceanSpacesService
 ) {
     private val buildDir: File
@@ -22,7 +21,14 @@ class UploadToDigitalOceanSpacesService(
 
     @Throws(GradleException::class)
     fun uploadToSpaces() {
-        checkVersionService.checkVersion(project, digitalOceanSpacesClient.ext, checkS3Client)
+        val defaultClient = DefaultDigitalOceanSpacesClient(extension, project.logger)
+        val digitalOceanSpacesClient = if (extension.dryRun) {
+            DryRunDigitalOceanSpacesClient(extension, project.logger)
+        } else {
+            defaultClient
+        }
+
+        checkVersionService.checkVersion(project, extension)
 
         val namespace = Namespace(
             groupId = project.group,
@@ -39,7 +45,7 @@ class UploadToDigitalOceanSpacesService(
                 .plus(createKdocJar(namespace))
                 .plus(pomFiles)
 
-        if (isPlugin) {
+        if (extension.isPlugin) {
             val mainJar = File(buildDir, namespace.jarPath)
             val pluginJar = File(buildDir, namespace.pluginJarPath)
             pluginJar.parentFile.mkdirs()
@@ -113,8 +119,6 @@ class UploadToDigitalOceanSpacesService(
             newPom
         )
 
-//        project.project.addGenerateHashesTask()
-
         val sha1 = DigitalOceanFile(
             namespace.pomSha1Key,
             File(buildDir, namespace.pomSha1Path).apply {
@@ -135,7 +139,7 @@ class UploadToDigitalOceanSpacesService(
     }
 
     private fun pluginPom(namespace: Namespace): Sequence<DigitalOceanFile> {
-        if (!isPlugin) return emptySequence()
+        if (!extension.isPlugin) return emptySequence()
 
         val targetPom = File(buildDir, namespace.pluginPomPath)
         targetPom.parentFile.mkdirs()

@@ -1,5 +1,6 @@
-package io.violabs.plugins.local.secrets
+package io.violabs.plugins.local.secrets.gradleloader.plugin
 
+import io.violabs.plugins.local.secrets.gradleloader.task.DefaultOutputTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import kotlin.reflect.KClass

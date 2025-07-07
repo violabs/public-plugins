@@ -42,6 +42,13 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
     val sharedAccessKey = "test access"
     val sharedSecretKey = "test secret"
 
+    val sharedExtension = DigitalOceanSpacesExtension().apply {
+        accessKey = sharedAccessKey
+        secretKey = sharedSecretKey
+        bucket = testBucket
+        artifactPath = givenArtifactPath
+    }
+
     val digitalOceanSpacesExtension = DigitalOceanSpacesExtension().apply {
         accessKey = sharedAccessKey
         secretKey = sharedSecretKey
@@ -106,17 +113,13 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
     private fun exceptionTest(tempDir: Path, extension: DigitalOceanSpacesExtension, expectedMessage: String) {
         val project = TestProjectAdapter(tempDir)
 
-        val digitalOceanSpacesClient = DefaultDigitalOceanSpacesClient(extension, logger) { _, _ -> s3BuilderAdapter }
-
         val uploadService = UploadToDigitalOceanSpacesService(
             project,
-            digitalOceanSpacesClient,
-            s3Client,
-            isPlugin = false,
+            extension,
             mockVersionCheck
         )
 
-        every { mockVersionCheck.checkVersion(any(), any(), any()) } just Runs
+        every { mockVersionCheck.checkVersion(any(), any()) } just Runs
 
         assertThrows<IllegalArgumentException> {
             uploadService.uploadToSpaces()
@@ -124,7 +127,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
             assert(message?.contains(expectedMessage) == true)
         }
 
-        verify { mockVersionCheck.checkVersion(any(), any(), any()) }
+        verify { mockVersionCheck.checkVersion(any(), any()) }
 
         confirmVerified(s3Client, mockVersionCheck)
     }
@@ -139,9 +142,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
 
         val uploadService = UploadToDigitalOceanSpacesService(
             project,
-            digitalOceanSpacesClient,
-            s3Client,
-            isPlugin = false,
+            sharedExtension,
             mockVersionCheck
         )
 
@@ -151,7 +152,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         val kdoc = jar.copy(prefix = "kdoc")
         val pom = jar.copy(fileType = "pom")
 
-        every { mockVersionCheck.checkVersion(any(), any(), any()) } just Runs
+        every { mockVersionCheck.checkVersion(any(), any()) } just Runs
 
         everyFileWithShas(jar)
         everyFileWithShas(sources)
@@ -169,7 +170,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
 
         verify(atLeast = 1) { s3Client.close() }
 
-        verify { mockVersionCheck.checkVersion(any(), any(), any()) }
+        verify { mockVersionCheck.checkVersion(any(), any()) }
 
         confirmVerified(s3Client, mockVersionCheck)
     }
@@ -184,9 +185,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
 
         val uploadService = UploadToDigitalOceanSpacesService(
             project,
-            digitalOceanSpacesClient,
-            s3Client,
-            isPlugin = true,
+            sharedExtension,
             mockVersionCheck
         )
 
@@ -196,7 +195,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
         val kdoc = jar.copy(prefix = "kdoc")
         val pom = jar.copy(fileType = "pom")
 
-        every { mockVersionCheck.checkVersion(any(), any(), any()) } just Runs
+        every { mockVersionCheck.checkVersion(any(), any()) } just Runs
 
         everyFileWithShas(jar)
         everyFileWithShas(sources)
@@ -265,7 +264,7 @@ class UploadToDigitalOceanSpacesServiceFunctionalTest : UnitTest() {
             )
         }
 
-        verify { mockVersionCheck.checkVersion(any(), any(), any()) }
+        verify { mockVersionCheck.checkVersion(any(), any()) }
 
         confirmVerified(s3Client, mockVersionCheck)
     }

@@ -1,4 +1,4 @@
-package io.violabs.plugins.local.secrets
+package io.violabs.plugins.local.secrets.gradleloader.task
 
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile

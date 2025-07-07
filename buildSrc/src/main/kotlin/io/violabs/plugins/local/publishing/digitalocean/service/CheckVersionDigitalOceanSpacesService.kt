@@ -1,6 +1,7 @@
 package io.violabs.plugins.local.publishing.digitalocean.service
 
 import io.violabs.plugins.local.publishing.digitalocean.adapter.ProjectAdapter
+import io.violabs.plugins.local.publishing.digitalocean.client.DefaultDigitalOceanSpacesClient
 import io.violabs.plugins.local.publishing.digitalocean.domain.DigitalOceanSpacesExtension
 import org.gradle.api.GradleException
 import org.gradle.api.services.BuildService
@@ -17,9 +18,10 @@ class CheckVersionDigitalOceanSpacesService : BuildService<CheckVersionDigitalOc
 
     fun checkVersion(
         project: ProjectAdapter,
-        ext: DigitalOceanSpacesExtension,
-        s3Client: S3Client
+        ext: DigitalOceanSpacesExtension
     ) {
+        val s3Client: S3Client = DefaultDigitalOceanSpacesClient(ext, project.logger).s3Client()
+
         val bucket = requireNotNull(ext.bucket) { "bucket is required" }
 
         addMetadataIfOutputFileIsAvailable(project)

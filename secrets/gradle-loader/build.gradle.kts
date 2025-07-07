@@ -1,8 +1,6 @@
-import io.violabs.plugins.local.publishing.digitalocean.domain.uploadToDigitalOceanSpaces
-import io.violabs.plugins.local.publishing.mavengenerated.domain.mavenGeneratedArtifacts
 import io.violabs.plugins.local.secrets.gradleloader.domain.getPropertyOrEnv
 
-val publishingMavenGeneratedArtifactsVersion: String by rootProject.extra
+val secretsGradleLoaderVersion: String by rootProject.extra
 
 plugins {
     `kotlin-dsl`
@@ -12,8 +10,8 @@ plugins {
     id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
 }
 
-group = "io.violabs.plugins.open.publishing"
-version = publishingMavenGeneratedArtifactsVersion
+group = "io.violabs.plugins.open.secrets"
+version = secretsGradleLoaderVersion
 
 buildscript {
     repositories {
@@ -25,7 +23,7 @@ buildscript {
 }
 
 tasks.jar {
-    archiveBaseName.set("maven-generated-artifacts")
+    archiveBaseName.set("gradle-loader")
 }
 
 repositories {
@@ -40,10 +38,10 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        create("mavenGeneratedArtifactsPlugin") {
-            id = "io.violabs.plugins.open.publishing.maven-generated-artifacts"
+        create("secretsLoaderPlugin") {
+            id = "io.violabs.plugins.open.secrets.gradle-loader"
             version = version.toString()
-            implementationClass = "io.violabs.plugins.open.publishing.mavengenerated.MavenGeneratedArtifactsPlugin"
+            implementationClass = "io.violabs.plugins.open.secrets.gradleloader.plugin.SecretsGradleLoaderPlugin"
         }
     }
 }
@@ -54,9 +52,9 @@ projectSync {
         .projectDirectory
         .asFile
     syncSource = projectFile
-        .resolve("publishing/maven-generated-artifacts/src/main/kotlin/io/violabs/plugins/open/publishing/mavengenerated")
+        .resolve("secrets/gradle-loader/src/main/kotlin/io/violabs/plugins/open/secrets/gradleloader")
     syncTarget = projectFile
-        .resolve("buildSrc/src/main/kotlin/io/violabs/plugins/local/publishing/mavengenerated")
+        .resolve("buildSrc/src/main/kotlin/io/violabs/plugins/local/secrets/gradleloader")
 }
 
 digitalOceanSpacesPublishing {
@@ -68,18 +66,13 @@ digitalOceanSpacesPublishing {
     dryRun = false
 }
 
-tasks.uploadToDigitalOceanSpaces?.apply {
-    dependsOn(tasks.mavenGeneratedArtifacts)
-}
-
 mavenGeneratedArtifacts {
     publicationName = "digitalOceanSpaces"
-    name = "Maven Generated Artifacts"
+    name = "Secrets Gradle Loader Plugin"
     description = """
-            This plugin generates Maven artifacts such as sources, Javadoc, and KDoc JARs.
-            It is used to publish these artifacts to a Maven repository or a digital ocean space.
+            A plugin that will read from a file containing secrets and load them into the Gradle project.
         """
-    websiteUrl = "https://github.com/violabs/public-plugins/tree/main/publishing/maven-generated-artifacts"
+    websiteUrl = "https://github.com/violabs/public-plugins/tree/main/secrets/gradle-loader"
 
     licenses {
         license {

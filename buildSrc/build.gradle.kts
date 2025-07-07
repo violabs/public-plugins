@@ -33,10 +33,10 @@ tasks.withType<Test> {
 
 gradlePlugin {
     plugins {
-        create("secretsLoaderPlugin") {
-            id = "io.violabs.plugins.local.secrets.loader"
+        create("localSecretsLoaderPlugin") {
+            id = "io.violabs.plugins.local.secrets.gradle-loader"
             version = "0.0.1"
-            implementationClass = "io.violabs.plugins.local.secrets.SecretsLoaderPlugin"
+            implementationClass = "io.violabs.plugins.local.secrets.gradleloader.plugin.SecretsLoaderPlugin"
         }
     }
 

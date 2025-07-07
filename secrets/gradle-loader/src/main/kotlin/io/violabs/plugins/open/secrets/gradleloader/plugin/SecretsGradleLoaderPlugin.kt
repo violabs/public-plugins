@@ -1,5 +1,8 @@
-package io.violabs.plugins.local.secrets
+package io.violabs.plugins.open.secrets.gradleloader.plugin
 
+import io.violabs.plugins.open.secrets.gradleloader.domain.Ext
+import io.violabs.plugins.open.secrets.gradleloader.domain.SecretsLoaderExtension
+import io.violabs.plugins.open.secrets.gradleloader.task.CheckSecretsExistTask
 import org.gradle.api.Project
 import org.gradle.api.logging.Logger
 import org.gradle.api.plugins.ExtraPropertiesExtension
@@ -10,7 +13,7 @@ import java.util.*
 /**
  * A plugin that loads secrets from a file or system properties into the project's extra properties.
  */
-open class SecretsLoaderPlugin : DefaultOutputPlugin() {
+open class SecretsGradleLoaderPlugin : DefaultOutputPlugin() {
     /**
      * Applies the plugin to the given project.
      * It creates an extension for configuring the secrets loader and registers a task to check if secrets exist.
@@ -20,7 +23,7 @@ open class SecretsLoaderPlugin : DefaultOutputPlugin() {
         val extension = project.extensions.create<SecretsLoaderExtension>("secretsLoader")
 
         project.afterEvaluate {
-            logger.lifecycle("Applying SecretsLoaderPlugin to project: ${name}")
+            logger.lifecycle("Applying SecretsLoaderPlugin to project: $name")
             logger.lifecycle(" | [INFO] secretFile: ${extension.secretFile}")
             logger.lifecycle(" | [INFO] systemProperties: ${extension.systemProperties()}")
 

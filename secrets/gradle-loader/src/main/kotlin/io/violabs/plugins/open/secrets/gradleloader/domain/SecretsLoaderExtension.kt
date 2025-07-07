@@ -1,4 +1,4 @@
-package io.violabs.plugins.local.secrets
+package io.violabs.plugins.open.secrets.gradleloader.domain
 
 open class SecretsLoaderExtension {
     var secretFile: String? = null

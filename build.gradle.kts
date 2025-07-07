@@ -2,7 +2,7 @@
 
 plugins {
     kotlin("jvm") version "2.0.20"
-    id("io.violabs.plugins.local.secrets.loader")
+    id("io.violabs.plugins.local.secrets.gradle-loader")
     id("org.jetbrains.dokka") version "1.9.20" apply false
 }
 
@@ -13,8 +13,9 @@ repositories {
     mavenCentral()
 }
 
-extra["publishingDigitalOceanSpacesVersion"] = "0.0.8"
+extra["publishingDigitalOceanSpacesVersion"] = "0.0.9"
 extra["publishingMavenGeneratedArtifactsVersion"] = "0.0.13"
+extra["secretsGradleLoaderVersion"] = "0.0.3"
 
 allprojects {
     apply {
