@@ -1,50 +1,54 @@
+# Violabs Public Plugins
 
-# Commands
+A collection of open-source Gradle plugins.
 
-## Uploading `publishing/maven-generated-artifacts` recent
+## Available Plugins
 
-```shell
-./gradlew publishing:maven-generated-artifacts:clean publishing:maven-generated-artifacts:uploadToDigitalOceanSpaces
+| Plugin | Description |
+|--------|-------------|
+| [Claude Code Skill Resolver](ai/claude/claude-code-skill-resolver) | Downloads and installs Claude Code skills from GitHub repositories |
+| [Digital Ocean Spaces](publishing/digital-ocean-spaces) | Publishes artifacts (JARs, POMs, Dokka) to DigitalOcean Spaces |
+| [Maven Generated Artifacts](publishing/maven-generated-artifacts) | Generates Maven artifacts (sources, Javadoc, KDoc JARs) for publishing |
+
+## Plugin Repository
+
+All plugins are hosted at:
+```
+https://open-reliquary.nyc3.digitaloceanspaces.com
 ```
 
-## Uploading `publishing/digital-ocean-spaces` recent
-
-```shell
-./gradlew publishing:digital-ocean-spaces:clean publishing:digital-ocean-spaces:uploadToDigitalOceanSpaces
-```
-
-# Future Implementation
+Add this to your `settings.gradle.kts`:
 
 ```kotlin
-abstract class DigitalOceanSpacesExtension {
-    abstract val endpoint: Property<String>
-    abstract val bucket: Property<String>
-    abstract val region: Property<String>
-    abstract val accessKey: Property<String>
-    abstract val secretKey: Property<String>
-    abstract val artifactPath: Property<String>
-    abstract val jarQualifier: Property<String>
-    abstract val dryRun: Property<Boolean>
-    
-    // New properties for exception handling
-    abstract val continueOnVersionCheckFailure: Property<Boolean>
-    abstract val suppressDetailedExceptions: Property<Boolean>
-
-    init {
-        // Set defaults
-        dryRun.convention(false)
-        continueOnVersionCheckFailure.convention(false)
-        suppressDetailedExceptions.convention(true) // Default to suppressing detailed exceptions
+pluginManagement {
+    repositories {
+        maven {
+            url = uri("https://open-reliquary.nyc3.digitaloceanspaces.com")
+        }
+        gradlePluginPortal()
     }
 }
 ```
 
-package sub projects
-```kotlin
-    dependsOn(subprojects.map { it.tasks.named("classes") })
+## License
 
-    // Pull in each subproject’s compiled classes & resources
-    from(subprojects.map { proj ->
-        proj.extensions.getByType<SourceSetContainer>()["main"].output
-    })
+Apache License, Version 2.0
+
+---
+
+## Development
+
+Internal notes for maintainers.
+
+### Uploading Plugins
+
+```shell
+# Claude Code Skill Resolver
+./gradlew :ai:claude:claude-code-skill-resolver:clean :ai:claude:claude-code-skill-resolver:uploadToDigitalOceanSpaces
+
+# Digital Ocean Spaces
+./gradlew publishing:digital-ocean-spaces:clean publishing:digital-ocean-spaces:uploadToDigitalOceanSpaces
+
+# Maven Generated Artifacts
+./gradlew publishing:maven-generated-artifacts:clean publishing:maven-generated-artifacts:uploadToDigitalOceanSpaces
 ```
