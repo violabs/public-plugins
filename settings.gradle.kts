@@ -20,6 +20,7 @@ pluginManagement {
 }
 
 include(
+    "ai:claude:claude-code-skill-resolver",
     "example",
     "publishing:digital-ocean-spaces",
     "publishing:maven-generated-artifacts",
