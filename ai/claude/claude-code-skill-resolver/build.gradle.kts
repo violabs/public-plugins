@@ -11,7 +11,7 @@ plugins {
     id("io.violabs.plugins.local.publishing.digital-ocean-spaces")
 }
 
-group = "io.violabs.plugins.open.ai.claude.claude-code-skill-resolver"
+group = "io.violabs.plugins.open.ai.claude"
 version = claudeCodeSkillResolver
 
 buildscript {
@@ -61,7 +61,7 @@ tasks.uploadToDigitalOceanSpaces?.apply {
 }
 
 mavenGeneratedArtifacts {
-    publicationName = "claudeCodeSkillResolver"
+    publicationName = "digitalOceanSpaces"  // Must match the name expected by the DO Spaces plugin
     name = "Claude Code Skill Resolver"
     description = """
             This plugin will download and copy skills based on url and output structure.
