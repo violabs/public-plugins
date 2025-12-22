@@ -13,7 +13,7 @@ repositories {
     mavenCentral()
 }
 
-extra["claudeCodeSkillResolver"] = "1.0.0"
+extra["claudeCodeSkillResolver"] = "1.0.1"
 extra["publishingDigitalOceanSpacesVersion"] = "0.0.8"
 extra["publishingMavenGeneratedArtifactsVersion"] = "0.0.13"
 

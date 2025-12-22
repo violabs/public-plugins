@@ -6,7 +6,7 @@ If you want to get the official supported skills, check out the [Anthropics Base
 
 ## What it does
 
-This plugin fetches skill files from a configured GitHub repository and copies them to your project's `claude/skills` directory, allowing you to share and reuse Claude Code skills across projects.
+This plugin fetches skill files from a configured GitHub repository and copies them to your project's `.claude/skills` directory, allowing you to share and reuse Claude Code skills across projects.
 
 ## Installation
 

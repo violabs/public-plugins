@@ -78,7 +78,7 @@ abstract class ClaudeCodeSkillResolverExtension {
         const val NAME = "claudeCodeSkillResolver"
         const val DEFAULT_BRANCH = "main"
         const val DEFAULT_SKILLS_PATH = "skills"
-        const val DEFAULT_OUTPUT_DIR = "claude/skills"
+        const val DEFAULT_OUTPUT_DIR = ".claude/skills"
         const val DEFAULT_CONNECTION_TIMEOUT_MS = 30_000L
         const val DEFAULT_READ_TIMEOUT_MS = 60_000L
     }
