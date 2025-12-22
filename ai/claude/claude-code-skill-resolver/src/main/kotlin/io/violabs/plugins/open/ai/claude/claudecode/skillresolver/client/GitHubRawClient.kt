@@ -2,6 +2,7 @@ package io.violabs.plugins.open.ai.claude.claudecode.skillresolver.client
 
 import io.violabs.plugins.open.ai.claude.claudecode.skillresolver.domain.SkillConfig
 import io.violabs.plugins.open.ai.claude.claudecode.skillresolver.domain.SkillFile
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import java.net.URI
 import java.net.http.HttpClient
@@ -37,8 +38,7 @@ class GitHubRawClient(
 
         val files = listSkillFiles(skillName)
         if (files.isEmpty()) {
-            logger.warn("  | No files found for skill: $skillName")
-            return emptyList()
+            return logEmptyRequest("No files found for skill: $skillName", LogLevel.WARN)
         }
 
         logger.lifecycle("  | Found ${files.size} file(s) in skill: $skillName")
@@ -55,37 +55,26 @@ class GitHubRawClient(
         val apiUrl = buildGitHubApiUrl(skillName)
         logger.info("  | Listing files from: $apiUrl")
 
-        //todo: extract create
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create(apiUrl))
-            .timeout(Duration.ofMillis(config.readTimeoutMs))
-            .header("Accept", "application/vnd.github.v3+json")
-            .header("User-Agent", "ClaudeCodeSkillResolver/1.0")
-            .GET()
-            .build()
+        val request: HttpRequest = buildGetRequest {
+            uri(apiUrl)
+            withDefaultTimeout()
+            headers(
+                "Accept" to "application/vnd.github.v3+json",
+                "User-Agent" to "ClaudeCodeSkillResolver/1.0"
+            )
+        }
 
         return try {
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
             when (response.statusCode()) {
-                200 -> parseGitHubDirectoryListing(response.body())
-                404 -> {
-                    logger.warn("  | Skill directory not found: $skillName")
-                    emptyList()
-                }
-                403 -> {
-                    //todo: refactor for combined effort
-                    logger.error("  | GitHub API rate limit exceeded or access denied for: $skillName")
-                    emptyList()
-                }
-                else -> {
-                    logger.error("  | Failed to list skill files: HTTP ${response.statusCode()}")
-                    emptyList()
-                }
+                200  -> parseGitHubDirectoryListing(response.body())
+                404  -> logEmptyRequest("Skill directory not found: $skillName", LogLevel.WARN)
+                403  -> logEmptyRequest("GitHub API rate limit exceeded or access denied for: $skillName")
+                else -> logEmptyRequest("Failed to list skill files: HTTP ${response.statusCode()}")
             }
         } catch (e: Exception) {
-            logger.error("  | Error listing skill files for $skillName: ${e.message}")
-            emptyList()
+            logEmptyRequest("Error listing skill files for $skillName: ${e.message}")
         }
     }
 
@@ -94,20 +83,18 @@ class GitHubRawClient(
      */
     private fun fetchFileContent(skillName: String, fileInfo: GitHubFileInfo): SkillFile? {
         if (fileInfo.type != "file") {
-            logger.info("  | Skipping non-file: ${fileInfo.name} (type: ${fileInfo.type})")
-            return null
+            return logMissingRequest("Skipping non-file: ${fileInfo.name} (type: ${fileInfo.type})", LogLevel.INFO)
         }
 
         val rawUrl = config.buildSkillFileUrl(skillName, fileInfo.name)
         logger.info("  | Fetching file: ${fileInfo.name} from $rawUrl")
 
         //todo: swap with builder
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create(rawUrl))
-            .timeout(Duration.ofMillis(config.readTimeoutMs))
-            .header("User-Agent", "ClaudeCodeSkillResolver/1.0")
-            .GET()
-            .build()
+        val request: HttpRequest = buildGetRequest {
+            uri(rawUrl)
+            withDefaultTimeout()
+            headers("User-Agent" to "ClaudeCodeSkillResolver/1.0")
+        }
 
         return try {
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
@@ -122,18 +109,11 @@ class GitHubRawClient(
                         url = rawUrl
                     )
                 }
-                404 -> {
-                    logger.warn("  |   ✗ ${fileInfo.name} (not found)")
-                    null
-                }
-                else -> {
-                    logger.error("  |   ✗ ${fileInfo.name} (HTTP ${response.statusCode()})")
-                    null
-                }
+                404 -> logMissingRequest("✗ ${fileInfo.name} (not found)", LogLevel.WARN)
+                else -> logMissingRequest("✗ ${fileInfo.name} (HTTP ${response.statusCode()})")
             }
         } catch (e: Exception) {
-            logger.error("  |   ✗ ${fileInfo.name} (${e.message})")
-            null
+            logMissingRequest("✗ ${fileInfo.name} (${e.message})")
         }
     }
 
@@ -218,6 +198,34 @@ class GitHubRawClient(
         // Pattern to match "key": "value" - handles escaped quotes in values
         val pattern = """"$key"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"""".toRegex()
         return pattern.find(json)?.groupValues?.get(1)
+    }
+
+    private fun buildGetRequest(scope: HttpRequest.Builder.() -> Unit): HttpRequest {
+        return HttpRequest.newBuilder().apply(scope).GET().build()
+    }
+
+    private fun HttpRequest.Builder.uri(uri: String): HttpRequest.Builder {
+        return this.uri(URI.create(uri))
+    }
+
+    private fun HttpRequest.Builder.withDefaultTimeout(): HttpRequest.Builder {
+        timeout(Duration.ofMillis(config.readTimeoutMs))
+        return this
+    }
+
+    private fun HttpRequest.Builder.headers(vararg headerPairs: Pair<String, String>): HttpRequest.Builder {
+        headerPairs.forEach { (key, value) -> header(key, value) }
+        return this
+    }
+
+    private fun <T> logMissingRequest(message: String, logLevel: LogLevel = LogLevel.ERROR): T? {
+        logger.log(logLevel, "  | $message")
+        return null
+    }
+
+    private fun <T> logEmptyRequest(message: String, logLevel: LogLevel = LogLevel.ERROR): List<T> {
+        logger.log(logLevel, "  | $message")
+        return emptyList()
     }
 
     /**

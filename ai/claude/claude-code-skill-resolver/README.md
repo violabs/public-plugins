@@ -1,10 +1,12 @@
 # Claude Code Skill Resolver
 
-A Gradle plugin that downloads and installs [Claude Code](https://claude.ai/claude-code) skills from GitHub repositories.
+A Gradle plugin that downloads and installs [Claude Code](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) skills from GitHub repositories.
+
+If you want to get the official supported skills, check out the [Anthropics Base Skills](https://github.com/anthropics/skills) repository.
 
 ## What it does
 
-This plugin fetches skill files from a configured GitHub repository and copies them to your project's `.claude/skills` directory, allowing you to share and reuse Claude Code skills across projects.
+This plugin fetches skill files from a configured GitHub repository and copies them to your project's `claude/skills` directory, allowing you to share and reuse Claude Code skills across projects.
 
 ## Installation
 
@@ -25,7 +27,7 @@ Apply the plugin in your `build.gradle.kts`:
 
 ```kotlin
 plugins {
-    id("io.violabs.plugins.open.ai.claude.claude-code-skill-resolver") version "0.0.1"
+    id("io.violabs.plugins.open.ai.claude.claude-code-skill-resolver") version "0.0.2"
 }
 ```
 
@@ -37,7 +39,7 @@ Configure the plugin to point to your skills repository:
 claudeCodeSkillResolver {
     owner.set("your-github-username")       // GitHub username or organization
     repo.set("your-skills-repo")            // Repository name
-    skills.set(listOf("pdf", "docx"))       // Skills to download
+    skills("pdf", "docx")       // Skills to download
 
     // Optional settings (shown with defaults)
     branch.set("main")                      // Branch to fetch from
@@ -81,6 +83,8 @@ Skill names must be in kebab-case (lowercase letters, numbers, and hyphens):
 - `docx`
 - `frontend-design`
 - `web-artifacts-builder`
+
+> Need a reference? Check out the [Anthropics Base Skills](https://github.com/anthropics/skills).
 
 ## License
 

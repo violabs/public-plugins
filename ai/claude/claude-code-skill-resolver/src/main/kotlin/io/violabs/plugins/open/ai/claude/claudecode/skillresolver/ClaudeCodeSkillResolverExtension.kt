@@ -72,6 +72,8 @@ abstract class ClaudeCodeSkillResolverExtension {
      */
     abstract val readTimeoutMs: Property<Long>
 
+    fun skills(vararg skills: String) = this.skills.set(skills.toList())
+
     companion object {
         const val NAME = "claudeCodeSkillResolver"
         const val DEFAULT_BRANCH = "main"
